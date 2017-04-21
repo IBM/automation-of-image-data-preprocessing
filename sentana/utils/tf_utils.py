@@ -49,3 +49,22 @@ def activation_summary(x):
     tensor_name = x.op.name
     tf.summary.histogram(tensor_name + "/activations", x)
     tf.summary.scalar(tensor_name + "/sparsity", tf.nn.zero_fraction(x))
+
+
+def int64_feature(value):
+    """
+    Encode a feature to int64.
+    :param value
+    :return
+    """
+    return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
+
+
+def bytes_feature(value):
+    """
+    Encode a feature to bytes.
+    :param value
+    :return
+    """
+    return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+

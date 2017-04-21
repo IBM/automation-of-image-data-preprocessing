@@ -1,4 +1,5 @@
 """
+The IBM License 2017.
 Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
 import os
@@ -11,6 +12,7 @@ IMAGE_DIR = "../data/cc_data"
 
 def download():
     files = os.listdir(URL_DIR)
+    files = [f for f in files if not f.startswith(".")]
     for file in files:
         os.mkdir(os.path.join(IMAGE_DIR, file.split(sep=".")[0]))
         with open(os.path.join(URL_DIR, file), "r") as f:

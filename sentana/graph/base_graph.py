@@ -4,7 +4,6 @@ Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
 import abc
 from importlib import __import__
-import tensorflow as tf
 
 from sentana.config.cf_container import Config as cf
 from sentana.network.loss.loss import Loss
@@ -14,24 +13,24 @@ class BaseGraph(metaclass=abc.ABCMeta):
     """
     This is a base class that helps build the tensorflow graph.
     """
+    def __init__(self, train=True):
+        """
+        Initialization.
+        :param train: train or test
+        """
+        if train:
+            self._train_step, self._obj_func = self._build_model_for_train()
+        else:
+            self._pred_output, self._obj_func = self._build_model_for_test()
+
     @staticmethod
-    def _declare_inputs():
+    def _declare_inputs(dr):
         """
         Declare inputs of a tensorflow graph.
+        :param: dr
         :return: input tensors
         """
-        if cf.read_type == "feeddict":
-            instances = tf.placeholder(dtype=tf.float32, name="instance",
-                            shape=[None, cf.ima_height, cf.ima_width, 3])
-            targets = tf.placeholder(dtype=tf.float32, shape=[None],
-                                    name="target")
-        elif cf.read_type == "pipeline":
-            # Todo
-            pass
-
-        else:
-            raise NotImplementedError("Data reader type %s not "
-                                      "supported yet!" % cf.read_type)
+        instances, targets = dr.get_batch()
 
         return instances, targets
 
@@ -43,7 +42,7 @@ class BaseGraph(metaclass=abc.ABCMeta):
         :return:
         """
         sub_mods = cf.net_arch.split(sep=".")
-        module = __import__("".join(sub_mods[:-1]), fromlist=sub_mods[-1])
+        module = __import__(".".join(sub_mods[:-1]), fromlist=sub_mods[-1])
         net_arch_name = getattr(module, sub_mods[-1])
         net_arch = net_arch_name(instances)
         preds = net_arch.build_arch()
@@ -82,3 +81,35 @@ class BaseGraph(metaclass=abc.ABCMeta):
         """
         Rebuild the model for test.
         """
+
+    @property
+    def get_preds(self):
+        """
+        Get prediction output.
+        :return:
+        """
+        return self._preds
+
+    @property
+    def get_error(self):
+        """
+        Get train/test error.
+        :return:
+        """
+        return self._obj_func
+
+    @property
+    def get_train_step(self):
+        """
+        Get train operator.
+        :return:
+        """
+        return self._train_step
+
+    @property
+    def get_targets(self):
+        """
+        Get true output.
+        :return:
+        """
+        return self._targets
