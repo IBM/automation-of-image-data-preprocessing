@@ -15,7 +15,7 @@ class Config(object):
     num_class = int(config_parser.get("general_param", "num_class"))
     net_arch = config_parser.get("general_param", "net_arch")
     loss_func = config_parser.get("general_param", "loss_func")
-    data_path = config_parser.get("general_param", "data_path")
+    train_path = config_parser.get("general_param", "train_path")
     test_path = config_parser.get("general_param", "test_path")
     num_epoch = int(config_parser.get("general_param", "num_epoch"))
     batch_size = int(config_parser.get("general_param", "batch_size"))

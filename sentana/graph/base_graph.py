@@ -6,30 +6,28 @@ import abc
 from importlib import __import__
 
 from sentana.config.cf_container import Config as cf
-from sentana.network.loss.loss import Loss
+from sentana.reader.data_reader import DataReader
 
 
 class BaseGraph(metaclass=abc.ABCMeta):
     """
     This is a base class that helps build the tensorflow graph.
     """
-    def __init__(self, train=True):
+    def __init__(self, data_path):
         """
-        Initialization.
-        :param train: train or test
+        Initialization of building a graph.
+        :param data_path:
         """
-        if train:
-            self._train_step, self._obj_func = self._build_model_for_train()
-        else:
-            self._pred_output, self._obj_func = self._build_model_for_test()
+        self._build_model(data_path)
 
     @staticmethod
-    def _declare_inputs(dr):
+    def _declare_inputs(data_path):
         """
         Declare inputs of a tensorflow graph.
-        :param: dr
+        :param data_path:
         :return: input tensors
         """
+        dr = DataReader(data_path)
         instances, targets = dr.get_batch()
 
         return instances, targets
@@ -57,8 +55,12 @@ class BaseGraph(metaclass=abc.ABCMeta):
         :param trues: target values
         :return: the loss
         """
-        loss = Loss(preds=preds, trues=trues)
-        total_loss = loss.compute_loss(cf.loss_func)
+        module = __import__("".join(["sentana.network.loss.", cf.loss_func]),
+                            fromlist=cf.loss_func.title().replace("_", ""))
+        loss_class = getattr(module, cf.loss_func.title().replace("_", ""))
+
+        loss = loss_class(preds=preds, trues=trues)
+        total_loss = loss.compute_loss()
 
         return total_loss
 
@@ -71,15 +73,9 @@ class BaseGraph(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def _build_model_for_train(self):
+    def _build_model(self):
         """
-        Build the total graph for training.
-        """
-
-    @abc.abstractmethod
-    def _build_model_for_test(self):
-        """
-        Rebuild the model for test.
+        Build the total graph.
         """
 
     @property

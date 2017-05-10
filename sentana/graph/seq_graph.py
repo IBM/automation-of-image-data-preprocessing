@@ -6,7 +6,6 @@ import tensorflow as tf
 
 from sentana.graph.base_graph import BaseGraph
 from sentana.config.cf_container import Config as cf
-from sentana.reader.data_reader import DataReader
 
 
 @BaseGraph.register
@@ -14,12 +13,12 @@ class SeqGraph(BaseGraph):
     """
     This class implements a sequential tensorflow graph.
     """
-    def __init__(self, train=True):
+    def __init__(self, data_path):
         """
-        Initialization.
-        :param train:
+        Initialization of building a graph.
+        :param data_path:
         """
-        super().__init__(train)
+        super().__init__(data_path)
 
     def _train(self, obj_func):
         """
@@ -38,27 +37,14 @@ class SeqGraph(BaseGraph):
 
         return train_step
 
-    def _build_model_for_train(self):
+    def _build_model(self, data_path):
         """
-        Build the total graph for training.
+        Build the total graph.
+        :param data_path:
         :return:
         """
-        dr = DataReader(cf.data_path)
-        self._instances, self._targets = self._declare_inputs(dr)
+        self._instances, self._targets = self._declare_inputs(data_path)
         self._preds = self._inference(self._instances)
         self._obj_func = self._loss(self._preds, self._targets)
         self._train_step = self._train(self._obj_func)
 
-        return self._train_step, self._obj_func
-
-    def _build_model_for_test(self):
-        """
-        Rebuild the model for test.
-        :return:
-        """
-        dr = DataReader(cf.test_path)
-        self._instances, self._targets = self._declare_inputs(dr)
-        self._preds = self._inference(self._instances)
-        self._obj_func = self._loss(self._preds, self._targets)
-
-        return self._preds, self._obj_func

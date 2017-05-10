@@ -50,7 +50,7 @@ class ModelRunner(object):
         :return:
         """
         with tf.Graph().as_default(), tf.Session() as self._sess:
-            sg = SeqGraph(train=True)
+            sg = SeqGraph(cf.train_path)
             self._train_step = sg.get_train_step
             self._error = sg.get_error
             self._sess.run(tf.group(tf.global_variables_initializer(),
@@ -99,7 +99,7 @@ class ModelRunner(object):
         :return:
         """
         with tf.Graph().as_default(), tf.Session() as self._sess:
-            sg = SeqGraph(train=False)
+            sg = SeqGraph(cf.test_path)
             self._error = sg.get_error
             self._preds = sg.get_preds
             self._trues = sg.get_targets
