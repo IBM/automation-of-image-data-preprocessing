@@ -3,10 +3,10 @@ The IBM License 2017.
 Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
 import abc
-from importlib import __import__
+
+import tensorflow as tf
 
 from sentana.config.cf_container import Config as cf
-from sentana.reader.data_reader import DataReader
 
 
 class BaseGraph(metaclass=abc.ABCMeta):
@@ -21,16 +21,15 @@ class BaseGraph(metaclass=abc.ABCMeta):
         self._build_model(data_path)
 
     @staticmethod
-    def _declare_inputs(data_path):
+    def _declare_inputs(data_reader):
         """
         Declare inputs of a tensorflow graph.
-        :param data_path:
+        :param data_reader:
         :return: input tensors
         """
-        dr = DataReader(data_path)
-        instances, targets = dr.get_batch()
+        input_tensors = data_reader.get_batch()
 
-        return instances, targets
+        return input_tensors
 
     @staticmethod
     def _inference(instances):
@@ -64,18 +63,29 @@ class BaseGraph(metaclass=abc.ABCMeta):
 
         return total_loss
 
-    @abc.abstractmethod
-    def _train(obj_func):
+    def _train(self, obj_func):
         """
         Define the train operator.
         :param obj_func: the function to be optimized
         :return: the train operator
         """
+        # Create gradient steps
+        tvars = tf.trainable_variables()
+        grads = tf.gradients(obj_func, tvars)
+        norm_grads, _ = tf.clip_by_global_norm(grads, cf.max_grad_norm)
+
+        # Define a train step
+        optimizer = tf.train.AdamOptimizer(cf.learning_rate)
+        train_step = optimizer.apply_gradients(zip(norm_grads, tvars))
+
+        return train_step
 
     @abc.abstractmethod
-    def _build_model(self):
+    def _build_model(self, data_path):
         """
         Build the total graph.
+        :param data_path:
+        :return:
         """
 
     @property
@@ -109,3 +119,20 @@ class BaseGraph(metaclass=abc.ABCMeta):
         :return:
         """
         return self._targets
+
+    @property
+    def get_actions(self):
+        """
+        Get best action for next step.
+        :return:
+        """
+        return self._action_out
+
+    @property
+    def get_instances(self):
+        """
+        Get input instances.
+        :return:
+        """
+        return self._instances
+

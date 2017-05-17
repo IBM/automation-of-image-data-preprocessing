@@ -11,10 +11,10 @@ from sentana.config.cf_container import Config as cf
 
 
 @BaseReader.register
-class DataReader(BaseReader):
+class RILReader(BaseReader):
     """
-    This class contains implementations of a data reader that will feed data
-    to TensorFlow by using the data pipeline mechanism.
+    This class contains implementations of a data reader for a reinforcement
+    learning task.
     """
     def __init__(self, path):
         """
@@ -33,14 +33,16 @@ class DataReader(BaseReader):
         _, serialized_example = reader.read(file_queue)
         features = tf.parse_single_example(serialized_example, features={
             "image": tf.VarLenFeature(tf.string),
-            "label": tf.FixedLenFeature([], tf.int64)})
+            "action": tf.FixedLenFeature([], tf.int64),
+            "reward": tf.FixedLenFeature([], tf.float32)})
 
         # Convert from a scalar string tensor to a float tensor and reshape
         image = tf.reshape(tf.decode_raw(features["image"].values, tf.float32),
                            [cf.ima_height, cf.ima_width, 3])
-        label = features["label"].values
+        action = features["action"].values
+        reward = features["reward"].values
 
-        return image, label
+        return image, action, reward
 
     def _read_input(self):
         """
@@ -55,14 +57,14 @@ class DataReader(BaseReader):
                                                     num_epochs=cf.num_epoch)
 
         # Even when reading in multiple threads, share the file queue
-        image, label = self._read_and_decode(file_queue)
+        image, action, reward = self._read_and_decode(file_queue)
 
         # Collect examples into batch
-        images, labels = tf.train.shuffle_batch(
-            [image, label], num_threads=3, batch_size=cf.batch_size,
+        images, actions, rewards = tf.train.shuffle_batch(
+            [image, action, reward], num_threads=3, batch_size=cf.batch_size,
             capacity=100 + 3 * cf.batch_size, allow_smaller_final_batch=True)
 
-        return images, labels
+        return images, actions, rewards
 
     def get_batch(self):
         """
@@ -70,6 +72,6 @@ class DataReader(BaseReader):
         is used to read data as batch per time.
         :return:
         """
-        images, labels = self._read_input()
+        images, actions, rewards = self._read_input()
 
-        return (images, labels)
+        return (images, actions, rewards)

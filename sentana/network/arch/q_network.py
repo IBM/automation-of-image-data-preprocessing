@@ -45,8 +45,6 @@ class QNetwork(BaseArch):
             conv1 = tf.nn.relu(pre_activation, name=scope.name)
             activation_summary(conv1)
 
-            #        pool1 = tf.nn.max_pool(value=conv1, ksize=[1, 1, 1, 96], name="pool1",
-            #                               strides=[1, 1, 1, 1], padding="VALID")
         pool1 = tf.reduce_max(conv1, reduction_indices=[3],
                               keep_dims=True, name="pool1")
         norm1 = tf.nn.lrn(input=pool1, depth_radius=4, bias=1.0,
@@ -64,8 +62,6 @@ class QNetwork(BaseArch):
             conv2 = tf.nn.relu(pre_activation, name=scope.name)
             activation_summary(conv2)
 
-            #        pool2 = tf.nn.max_pool(value=conv2, ksize=[1, 1, 1, 256], name="pool2",
-            #                               strides=[1, 1, 1, 1], padding="VALID")
         pool2 = tf.reduce_max(conv2, reduction_indices=[3],
                               keep_dims=True, name="pool2")
         norm2 = tf.nn.lrn(input=pool2, depth_radius=4, bias=1.0,
@@ -109,16 +105,5 @@ class QNetwork(BaseArch):
         # Combine them together to get final Q value
         q_out = value + tf.sub(advantage, tf.reduce_mean(advantage, axis=1,
                                                          keep_dims=True))
-        pred_action = tf.argmax(q_out, 1)
 
-        # For training the Dual-Q network
-        action_onehot = tf.one_hot(self.actions, env.actions,
-                                         dtype=tf.float32)
-
-        self.Q = tf.reduce_sum(tf.multiply(self.Qout, self.actions_onehot),
-                               axis=1)
-
-        self.td_error = tf.square(self.targetQ - self.Q)
-        self.loss = tf.reduce_mean(self.td_error)
-        self.trainer = tf.train.AdamOptimizer(learning_rate=0.0001)
-        self.updateModel = self.trainer.minimize(self.loss)
+        return (q_out, tf.arg_max(q_out, 1))

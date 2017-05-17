@@ -22,3 +22,8 @@ class Config(object):
     max_grad_norm = float(config_parser.get("general_param", "max_grad_norm"))
     learning_rate = float(config_parser.get("general_param", "learning_rate"))
     save_model = config_parser.get("general_param", "save_model")
+
+    # Load ril parameters
+    num_action = int(config_parser.get("ril_param", "num_action"))
+    exploration = float(config_parser.get("ril_param", "exploration"))
+

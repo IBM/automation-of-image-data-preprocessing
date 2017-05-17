@@ -2,7 +2,7 @@
 The IBM License 2017.
 Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
-from sentana.runner.model_runner import ModelRunner
+from sentana.app.vanila.model_runner import ModelRunner
 from sentana.config.cf_container import Config as cf
 
 
