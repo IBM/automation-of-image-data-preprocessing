@@ -106,4 +106,4 @@ class QNetwork(BaseArch):
         q_out = value + tf.sub(advantage, tf.reduce_mean(advantage, axis=1,
                                                          keep_dims=True))
 
-        return (q_out, tf.arg_max(q_out, 1))
+        return (q_out, tf.arg_max(q_out, 1), tf.reduce_max(q_out, 1))

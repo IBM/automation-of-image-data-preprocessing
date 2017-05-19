@@ -7,12 +7,15 @@ import os
 import tensorflow as tf
 import warnings
 from itertools import islice
+from itertools import compress
 import ast
 import numpy as np
 
 from sentana.graph.ril_graph import RILGraph
 from sentana.config.cf_container import Config as cf
 from sentana.utils.misc import clear_model_dir
+from sentana.app.ril.batch_sim_env import BatchSimEnv
+from sentana.app.ril.exp_buffer import ExpBuffer
 
 
 class ReInLearning(object):
@@ -57,23 +60,68 @@ class ReInLearning(object):
                 else:
                     warnings.warn("Model not exist, train a new model now")
 
+            # Initialize an environment
+            image_batch, label_batch, batch_size = [], [], cf.batch_size
+            env = BatchSimEnv()
+
             # Start training the policy network
             for epoch in range(cf.num_epoch):
+                # Initialize an exp buffer for current epoch
+                exp_buf = ExpBuffer()
+
+                # Process an epoch
+                num_step, reward_all = 0, 0
                 with open(cf.train_path, "r") as df:
-                    batch_size = cf.batch_size
                     while True:
                         if batch_size > 0:
                             images, labels = self._get_batch(df, batch_size)
+                            image_batch.extend(images)
+                            label_batch.extend(labels)
+                            env.add(image_batch=images, label_batch=labels)
 
-                            image_batch = image_batch + images
-                            label_batch = label_batch + labels
+                        if len(image_batch) == 0: break
 
                         if np.random.rand(1) < cf.exploration:
-                            action = np.random.randint(0, cf.num_action,
+                            actions = np.random.randint(0, cf.num_action,
                                                        len(image_batch))
                         else:
-                            action = self._sess.run(
-                                rg.get_actions,
+                            actions = self._sess.run(rg.get_actions,
                                 feed_dict={rg.get_instances: image_batch})
 
+                        states, rewards, dones = env.step(actions)
+                        exp_buf.add([(i, a, s, r, d) for (i, a, s, r, d) in zip(
+                            image_batch, actions, states, rewards, dones)])
 
+                        if cf.exploration > 0.1:
+                            cf.exploration -= (0.9 / 10000)
+
+                        if num_step % 5 == 0:
+                            train_batch = exp_buf.sample(128)
+                            i_states = np.array([e[0] for e in train_batch])
+                            i_actions = np.array([e[1] for e in train_batch])
+                            o_states = np.array([e[2] for e in train_batch])
+                            i_rewards = np.array([e[3] for e in train_batch])
+                            end_mul = np.array([1-e[4] for e in train_batch])
+
+                            qmax = self._sess.run(rg.get_qmax,
+                                feed_dict={rg.get_instances: o_states})
+                            target = i_rewards + 0.99*qmax*end_mul
+                            _ = self._sess.run(rg.get_train_step,
+                                feed_dict={rg.get_instances: i_states,
+                                           rg.get_actions: i_actions,
+                                           rg.get_targets: target})
+
+                        reward_all += sum(rewards)
+                        num_step += 1
+                        batch_size = len(dones) - sum(dones)
+                        image_batch = list(compress(image_batch,
+                                                    np.logical_not(dones)))
+                        label_batch = list(compress(label_batch,
+                                                    np.logical_not(dones)))
+
+                        if num_step % 10 == 0:
+                            print("Epoch %d, step %d has rewards %g" % (
+                                epoch, num_step, reward_all))
+
+    def test_policy(self):
+        pass

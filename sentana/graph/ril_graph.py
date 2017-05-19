@@ -38,7 +38,7 @@ class RILGraph(BaseGraph):
             self._actions = tf.placeholder(tf.int32, shape=[None])
             self._targets = tf.placeholder(tf.float32, shape=[None])
 
-        (q_out, self._action_out) = self._inference(self._instances)
+        (q_out, self._action_out, self._qmax) = self._inference(self._instances)
         action_onehot = tf.one_hot(self._actions, depth=cf.num_action, axis=-1,
                                    dtype=tf.float32)
         self._preds = tf.reduce_sum(tf.multiply(q_out, action_onehot), axis=1)

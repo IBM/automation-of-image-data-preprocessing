@@ -136,3 +136,12 @@ class BaseGraph(metaclass=abc.ABCMeta):
         """
         return self._instances
 
+    @property
+    def get_qmax(self):
+        """
+        Get max Q value.
+        :return:
+        """
+        return self._qmax
+
+
