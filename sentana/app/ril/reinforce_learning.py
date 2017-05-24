@@ -3,6 +3,7 @@ The IBM License 2017.
 Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
 import os
+from os.path import expanduser
 
 import tensorflow as tf
 import warnings
@@ -36,15 +37,16 @@ class ReInLearning(object):
         image_batch, label_batch = [], []
         lines = islice(data_file, batch_size)
         for line in lines:
-            (image, label) = ast.literal_eval(line)
-            image_batch.append(image)
+            line = ast.literal_eval(line)
+            (image, label) = (line["img"], line["label"])
+            image_batch.append(np.array(image))
             label_batch.append(label)
 
         return image_batch, label_batch
 
     def train_policy(self, cont=False):
         with tf.Graph().as_default(), tf.Session() as self._sess:
-            ril_path = "~/.sentana_ril"
+            ril_path = os.path.join(expanduser("~"), ".sentana_ril")
             clear_model_dir(ril_path)
             rg = RILGraph()
             self._sess.run(tf.group(tf.global_variables_initializer(),
@@ -85,18 +87,25 @@ class ReInLearning(object):
                             actions = np.random.randint(0, cf.num_action,
                                                        len(image_batch))
                         else:
-                            actions = self._sess.run(rg.get_actions,
+                            actions = self._sess.run(rg.get_next_actions,
                                 feed_dict={rg.get_instances: image_batch})
 
                         states, rewards, dones = env.step(actions)
-                        exp_buf.add([(i, a, s, r, d) for (i, a, s, r, d) in zip(
-                            image_batch, actions, states, rewards, dones)])
+                        extra = []
+                        for (i, a, s, r, d) in zip(
+                                image_batch, actions, states, rewards, dones):
+                            if a < 2:
+                                extra.extend([(i, 1-a, s, -r, d),
+                                              (i, a, s, r, d)])
+                            else:
+                                extra.extend([(i, a, s, r, d)])
+                        exp_buf.add(extra)
 
                         if cf.exploration > 0.1:
                             cf.exploration -= (0.9 / 10000)
 
                         if num_step % 5 == 0:
-                            train_batch = exp_buf.sample(128)
+                            train_batch = exp_buf.sample(32)
                             i_states = np.array([e[0] for e in train_batch])
                             i_actions = np.array([e[1] for e in train_batch])
                             o_states = np.array([e[2] for e in train_batch])
@@ -119,7 +128,7 @@ class ReInLearning(object):
                         label_batch = list(compress(label_batch,
                                                     np.logical_not(dones)))
 
-                        if num_step % 10 == 0:
+                        if num_step % 1 == 0:
                             print("Epoch %d, step %d has rewards %g" % (
                                 epoch, num_step, reward_all))
 

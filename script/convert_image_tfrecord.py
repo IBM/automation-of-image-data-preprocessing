@@ -25,7 +25,7 @@ def process_image(im_path):
     # Resize image
     ml = np.min(im.shape[:-1])
     resize_im = cv.resize(im, (int(im.shape[1] / ml * IM_SIZE),
-                                int(im.shape[0] / ml * IM_SIZE)))
+                               int(im.shape[0] / ml * IM_SIZE)))
 
     # Crop image
     dim0 = int((resize_im.shape[0] - IM_SIZE) / 2)

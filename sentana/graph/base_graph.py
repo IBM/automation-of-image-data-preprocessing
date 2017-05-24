@@ -121,12 +121,20 @@ class BaseGraph(metaclass=abc.ABCMeta):
         return self._targets
 
     @property
-    def get_actions(self):
+    def get_next_actions(self):
         """
         Get best action for next step.
         :return:
         """
         return self._action_out
+
+    @property
+    def get_actions(self):
+        """
+        Get action in.
+        :return:
+        """
+        return self._actions
 
     @property
     def get_instances(self):

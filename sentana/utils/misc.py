@@ -21,7 +21,7 @@ def clear_model_dir(mdir):
     os.mkdir(mdir)
 
 
-def xavier_init(fan_in, fan_out, const=1):
+def xavier_init(fan_in, fan_out, const=1, dtype=tf.float32):
     """
     Xavier initialization.
     :param fan_in:
@@ -31,7 +31,8 @@ def xavier_init(fan_in, fan_out, const=1):
     """
     low = -const * np.sqrt(3.0 / (fan_in + fan_out))
     high = const * np.sqrt(3.0 / (fan_in + fan_out))
-    return tf.random_uniform((fan_in, fan_out), minval=low, maxval=high)
+    return tf.random_uniform((fan_in, fan_out), minval=low,
+                             maxval=high, dtype=dtype)
 
 
 def weighted_pick(weights):

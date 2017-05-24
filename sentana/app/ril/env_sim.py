@@ -35,7 +35,7 @@ class EnvSim(object):
         :return:
         """
         if action == 0 or action == 1:
-            result = self._state
+            state = self._state
             if self._label == action: reward = 1
             else: reward = -1
             done = True

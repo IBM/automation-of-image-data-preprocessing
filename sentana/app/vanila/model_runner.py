@@ -101,7 +101,7 @@ class ModelRunner(object):
         with tf.Graph().as_default(), tf.Session() as self._sess:
             sg = SeqGraph(cf.test_path)
             self._error = sg.get_error
-            self._preds = sg.get_preds
+            self._preds = tf.argmax(sg.get_preds, axis=1)
             self._trues = sg.get_targets
             self._sess.run(tf.group(tf.global_variables_initializer(),
                                     tf.local_variables_initializer()))
@@ -122,10 +122,8 @@ class ModelRunner(object):
             try:
                 while not coord.should_stop():
                     preds, trues, err = self._run_test_step()
-                    print(preds)
-                    print(trues)
-                    pred_list += preds
-                    true_list += trues
+                    pred_list.extend(preds)
+                    true_list.extend(trues)
                     err_list.append(err)
 
             except tf.errors.OutOfRangeError:

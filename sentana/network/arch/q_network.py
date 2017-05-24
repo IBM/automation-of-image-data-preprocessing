@@ -93,12 +93,12 @@ class QNetwork(BaseArch):
 
         # Implement the Dual-Q network
         # Split into separate advantage and value
-        pre_adv, pre_val = tf.split(fc2, 2, 1)
+        pre_adv, pre_val = tf.split(value=fc2, num_split=2, split_dim=1)
         w_adv = declare_variable_weight_decay(name="w_adv", wd=0.0,
                                               shape=[256, cf.num_action],
-                                              initializer=xavier_init)
+                                              initializer=initializer)
         w_val = declare_variable_weight_decay(name="w_val", shape=[256, 1],
-                                              initializer=xavier_init, wd=0.0)
+                                              initializer=initializer, wd=0.0)
         advantage = tf.matmul(pre_adv, w_adv)
         value = tf.matmul(pre_val, w_val)
 

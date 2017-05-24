@@ -34,5 +34,5 @@ class ExpBuffer(object):
         :param size:
         :return:
         """
-        return random.sample(self._buffer, size)
+        return random.sample(self._buffer, min(size, len(self._buffer)))
 

@@ -27,6 +27,6 @@ class MeanSquareError(Loss):
         :return:
         """
         tf.contrib.losses.mean_squared_error(predictions=self._preds,
-                                             targets=self._trues,
+                                             labels=self._trues,
                                              weights=weights)
 

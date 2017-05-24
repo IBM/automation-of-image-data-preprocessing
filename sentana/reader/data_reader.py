@@ -38,7 +38,7 @@ class DataReader(BaseReader):
         # Convert from a scalar string tensor to a float tensor and reshape
         image = tf.reshape(tf.decode_raw(features["image"].values, tf.float32),
                            [cf.ima_height, cf.ima_width, 3])
-        label = features["label"].values
+        label = features["label"]
 
         return image, label
 
@@ -58,8 +58,8 @@ class DataReader(BaseReader):
         image, label = self._read_and_decode(file_queue)
 
         # Collect examples into batch
-        images, labels = tf.train.shuffle_batch(
-            [image, label], num_threads=3, batch_size=cf.batch_size,
+        images, labels = tf.train.shuffle_batch([image, label],
+            num_threads=3, batch_size=cf.batch_size, min_after_dequeue=100,
             capacity=100 + 3 * cf.batch_size, allow_smaller_final_batch=True)
 
         return images, labels
