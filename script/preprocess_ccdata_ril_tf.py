@@ -29,7 +29,9 @@ def process():
     _, label_dict = get_labels(LABEL)
 
     # Process images for each label, do in parallel
-    labels = list(label_dict.keys())
+    #labels = list(label_dict.keys())
+    labels = os.listdir(IM_DIR)
+    labels = [l for l in labels if not l.startswith(".")]
     jobs = []
     lpp = int(len(labels) / 4)
     for i in range(4):
