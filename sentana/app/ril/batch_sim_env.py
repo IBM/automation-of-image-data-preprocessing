@@ -27,16 +27,17 @@ class BatchSimEnv(object):
         :param action_batch:
         :return:
         """
-        states, rewards, dones = [], [], []
+        states, rewards, dones, trues = [], [], [], []
         for (idx, env) in enumerate(self._envs):
             state, reward, done = env.step(action_batch[idx])
             states.append(state)
             rewards.append(reward)
             dones.append(done)
+            trues.append(env.get_label)
 
         self._envs = list(compress(self._envs, np.logical_not(dones)))
 
-        return states, rewards, dones
+        return states, rewards, dones, trues
 
     def add(self, image_batch, label_batch):
         """

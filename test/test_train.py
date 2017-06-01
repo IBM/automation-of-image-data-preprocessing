@@ -8,7 +8,7 @@ from sentana.app.ril.reinforce_learning import ReInLearning
 
 def letstrain():
     #mr = ModelRunner()
-    #mr.train_model(cont=True)
+    #mr.train_model(cont=False)
 
     ril = ReInLearning()
     ril.train_policy(cont=False)

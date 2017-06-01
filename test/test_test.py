@@ -11,9 +11,12 @@ def letstest():
     cf.num_epoch = 1
     #mr = ModelRunner()
     #pred_list, true_list = mr.test_model()
-    #print((pred_list[:20], true_list[:20]))
+    #print((pred_list[:50], true_list[:50]))
 
     ril = ReInLearning()
+    pred_list, true_list = ril.test_policy()
+    print((pred_list[:50], true_list[:50]))
+    print(len(pred_list), len(true_list))
 
 
 if __name__ == "__main__":

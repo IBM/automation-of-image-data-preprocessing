@@ -18,6 +18,14 @@ class EnvSim(object):
         self._state = state
         self._label = label
 
+    @property
+    def get_label(self):
+        """
+        Get the true label of the current environment.
+        :return:
+        """
+        return self._label
+
     def reset(self, state, label):
         """
         Reset the environment with new state and label.
@@ -42,37 +50,37 @@ class EnvSim(object):
 
         elif action == 2:
             state = self._flip(-1)
-            reward = 0
+            reward = 0.1
             done = False
 
         elif action == 3:
             state = self._flip(0)
-            reward = 0
+            reward = 0.1
             done = False
 
         elif action == 4:
             state = self._flip(1)
-            reward = 0
+            reward = 0.1
             done = False
 
         elif action == 5:
             state = self._crop(0.9)
-            reward = 0
+            reward = 0.1
             done = False
 
         elif action == 6:
             state = self._scale(1.1)
-            reward = 0
+            reward = 0.1
             done = False
 
         elif action == 7:
             state = self._rotate(-15)
-            reward = 0
+            reward = 0.1
             done = False
 
         elif action == 8:
             state = self._rotate(15)
-            reward = 0
+            reward = 0.1
             done = False
 
         return state, reward, done
