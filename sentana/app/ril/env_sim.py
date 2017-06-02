@@ -17,6 +17,7 @@ class EnvSim(object):
         """
         self._state = state
         self._label = label
+        self._age = 0
 
     @property
     def get_label(self):
@@ -25,6 +26,14 @@ class EnvSim(object):
         :return:
         """
         return self._label
+
+    @property
+    def get_age(self):
+        """
+        Get the age of the current environment.
+        :return:
+        """
+        return self._age
 
     def reset(self, state, label):
         """
@@ -35,6 +44,7 @@ class EnvSim(object):
         """
         self._state = state
         self._label = label
+        self._age = 0
 
     def step(self, action):
         """
@@ -42,6 +52,7 @@ class EnvSim(object):
         :param action:
         :return:
         """
+        self._age += 1
         if action == 0 or action == 1:
             state = self._state
             if self._label == action: reward = 1
@@ -50,37 +61,37 @@ class EnvSim(object):
 
         elif action == 2:
             state = self._flip(-1)
-            reward = 0.1
+            reward = 0
             done = False
 
         elif action == 3:
             state = self._flip(0)
-            reward = 0.1
+            reward = 0
             done = False
 
         elif action == 4:
             state = self._flip(1)
-            reward = 0.1
+            reward = 0
             done = False
 
         elif action == 5:
             state = self._crop(0.9)
-            reward = 0.1
+            reward = 0
             done = False
 
         elif action == 6:
             state = self._scale(1.1)
-            reward = 0.1
+            reward = 0
             done = False
 
         elif action == 7:
             state = self._rotate(-15)
-            reward = 0.1
+            reward = 0
             done = False
 
         elif action == 8:
             state = self._rotate(15)
-            reward = 0.1
+            reward = 0
             done = False
 
         return state, reward, done

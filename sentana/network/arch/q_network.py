@@ -105,5 +105,6 @@ class QNetwork(BaseArch):
         # Combine them together to get final Q value
         q_out = value + tf.sub(advantage, tf.reduce_mean(advantage, axis=1,
                                                          keep_dims=True))
+        q_out = tf.tanh(q_out)
 
         return (q_out, tf.arg_max(q_out, 1), tf.reduce_max(q_out, 1))

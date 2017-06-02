@@ -67,11 +67,11 @@ class ReInLearning(object):
                 else:
                     warnings.warn("Model not exist, train a new model now")
 
+            # Initialize an exp buffer for current epoch
+            exp_buf = ExpBuffer(cf.train_size*10)
+
             # Start training the policy network
             for epoch in range(cf.num_epoch):
-                # Initialize an exp buffer for current epoch
-                exp_buf = ExpBuffer()
-
                 # Initialize an environment
                 env = BatchSimEnv()
                 image_batch, batch_size = [], cf.batch_size
@@ -100,15 +100,16 @@ class ReInLearning(object):
                                 feed_dict={rg.get_instances: image_batch})
 
                         # Add extra examples to the buffer after doing actions
-                        states, rewards, dones, _ = env.step(actions)
+                        states, rewards, dones, _, ages = env.step(actions)
                         extra = []
-                        for (i, a, s, r, d) in zip(
-                                image_batch, actions, states, rewards, dones):
+                        for (i, a, s, r, d, g) in zip(image_batch, actions,
+                                                      states, rewards,
+                                                      dones, ages):
                             if a < 2:
-                                extra.extend([(i, 1-a, s, -r, d),
-                                              (i, a, s, r, d)])
+                                extra.extend([(i, 1-a, s, -r, d, g),
+                                              (i, a, s, r, d, g)])
                             else:
-                                extra.extend([(i, a, s, r, d)])
+                                extra.extend([(i, a, s, r, d, g)])
                         exp_buf.add(extra)
 
                         # Decrease the exploration
@@ -123,10 +124,13 @@ class ReInLearning(object):
                             o_states = np.array([e[2] for e in train_batch])
                             i_rewards = np.array([e[3] for e in train_batch])
                             end_mul = np.array([1-e[4] for e in train_batch])
+                            i_ages = np.array([e[5] for e in train_batch])
 
                             qmax = self._sess.run(rg.get_qmax,
                                 feed_dict={rg.get_instances: o_states})
-                            target = i_rewards + cf.gamma*qmax*end_mul
+                            target = i_rewards + (
+                                cf.gamma-0.01*i_ages)*qmax*end_mul
+
                             _ = self._sess.run(rg.get_train_step,
                                 feed_dict={rg.get_instances: i_states,
                                            rg.get_actions: i_actions,
@@ -136,13 +140,14 @@ class ReInLearning(object):
                         reward_all += sum(rewards)
                         num_step += 1
                         batch_size = sum(dones)
-                        image_batch = list(compress(image_batch,
+                        image_batch = list(compress(states,
                                                     np.logical_not(dones)))
 
                         # Print rewards after every number of steps
-                        if num_step % 5 == 0:
-                            print("Epoch %d, step %d has accumulated rewards %g"
-                                  % (epoch, num_step, reward_all))
+                        if num_step % 10 == 0:
+                            print("Epoch %d, step %d has accumulated "
+                                  "rewards %g and processed %d images"
+                                  % (epoch, num_step, reward_all, sum(dones)))
 
             # Save model
             clear_model_dir(os.path.dirname(cf.save_model))
@@ -191,12 +196,12 @@ class ReInLearning(object):
                         feed_dict={rg.get_instances: image_batch})
 
                     # Do actions
-                    states, rewards, dones, trues = env.step(actions)
+                    states, rewards, dones, trues, _ = env.step(actions)
+                    print(actions)
 
                     # Collect predictions
                     batch_size = sum(dones)
-                    image_batch = list(compress(image_batch,
-                                                np.logical_not(dones)))
+                    image_batch = list(compress(states, np.logical_not(dones)))
                     label_predict.extend(list(compress(actions, dones)))
                     label_actual.extend(list(compress(trues, dones)))
                     print("Processed up to %d images" % len(label_predict))

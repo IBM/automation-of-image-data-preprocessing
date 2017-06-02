@@ -6,9 +6,11 @@ import os
 
 import cv2 as cv
 import numpy as np
-import json
 import multiprocessing
 import tensorflow as tf
+import bz2
+import pickle
+import random
 
 from sentana.utils.tf_utils import bytes_feature
 from sentana.utils.tf_utils import int64_feature
@@ -31,7 +33,8 @@ def process():
     # Process images for each label, do in parallel
     #labels = list(label_dict.keys())
     labels = os.listdir(IM_DIR)
-    labels = [l for l in labels if not l.startswith(".")]
+    labels = [l for l in labels if not l.startswith(".")
+              and l in label_dict.keys()]
     jobs = []
     lpp = int(len(labels) / 4)
     for i in range(4):
@@ -44,7 +47,42 @@ def process():
 
         jobs.append(p)
         p.start()
+        p.join()
         print(p.pid)
+
+    # Start merging
+    print("Start merging...")
+    multiprocessing.Process(target=merge, args=(labels, "train")).start()
+    multiprocessing.Process(target=merge, args=(labels, "valid")).start()
+    multiprocessing.Process(target=merge, args=(labels, "test")).start()
+
+
+def merge(labels, part):
+    """
+    Randomly merge bz2 files together.
+    :param labels:
+    :param part:
+    :return:
+    """
+    files = [os.path.join(OUT_DIR, part, l + ".bz2") for l in labels]
+    readers = [bz2.BZ2File(file, "rb") for file in files]
+    writer = bz2.BZ2File(os.path.join(OUT_DIR, part, part + ".bz2"), "wb")
+
+    while len(readers) > 0:
+        random.shuffle(readers)
+        for (i, r) in enumerate(readers):
+            try:
+                line = pickle.load(r)
+                pickle.dump(line, writer)
+            except EOFError:
+                r.close()
+                os.remove(r.name)
+                del readers[i]
+                break
+
+            if np.random.rand() < 0.01: break
+
+    writer.close()
 
 
 def get_labels(filename):
@@ -55,7 +93,6 @@ def get_labels(filename):
     """
     with open(filename) as f:
         content = f.readlines()[3:]
-        print (content[0])
 
     label_dict = {}
     anp_dict = {}
@@ -77,21 +114,21 @@ def worker(labels, label_dict):
     :return:
     """
     for label in labels:
-        # Writers for tfrecords
-        tf_writer_train = tf.python_io.TFRecordWriter(os.path.join(
-            OUT_DIR, "tf_train", label + ".tftrain"))
-        tf_writer_valid = tf.python_io.TFRecordWriter(os.path.join(
-            OUT_DIR, "tf_valid", label + ".tfvalid"))
-        tf_writer_test = tf.python_io.TFRecordWriter(os.path.join(
-            OUT_DIR, "tf_test", label + ".tftest"))
+        # # Writers for tfrecords
+        # tf_writer_train = tf.python_io.TFRecordWriter(os.path.join(
+        #     OUT_DIR, "tf_train", label + ".tftrain"))
+        # tf_writer_valid = tf.python_io.TFRecordWriter(os.path.join(
+        #     OUT_DIR, "tf_valid", label + ".tfvalid"))
+        # tf_writer_test = tf.python_io.TFRecordWriter(os.path.join(
+        #     OUT_DIR, "tf_test", label + ".tftest"))
 
         # Writer for ril
-        ril_writer_train = open(os.path.join(OUT_DIR, "ril_train",
-                                             label + ".riltrain"), "w")
-        ril_writer_valid = open(os.path.join(OUT_DIR, "ril_valid",
-                                             label + ".rilvalid"), "w")
-        ril_writer_test = open(os.path.join(OUT_DIR, "ril_test",
-                                             label + ".riltest"), "w")
+        ril_writer_train = bz2.BZ2File(os.path.join(OUT_DIR, "train",
+                                                    label + ".bz2"), "wb")
+        ril_writer_valid = bz2.BZ2File(os.path.join(OUT_DIR, "valid",
+                                                    label + ".bz2"), "wb")
+        ril_writer_test = bz2.BZ2File(os.path.join(OUT_DIR, "test",
+                                                   label + ".bz2"), "wb")
 
         # Process images for each label
         files = os.listdir(os.path.join(IM_DIR, label))
@@ -100,15 +137,15 @@ def worker(labels, label_dict):
         label_score = 1 if label_dict[label] >= 0 else 0
 
         worker_assist(files[:int(0.8*len(files))], label_score,
-                      tf_writer_train, ril_writer_train)
+                      tf_writer=None, ril_writer=ril_writer_train)
         worker_assist(files[int(0.8*len(files)):int(0.9*len(files))],
-                      label_score, tf_writer_valid, ril_writer_valid)
+                      label_score, tf_writer=None, ril_writer=ril_writer_valid)
         worker_assist(files[int(0.9*len(files)):], label_score,
-                      tf_writer_test, ril_writer_test)
+                      tf_writer=None, ril_writer=ril_writer_test)
 
-        tf_writer_train.close()
-        tf_writer_valid.close()
-        tf_writer_test.close()
+        # tf_writer_train.close()
+        # tf_writer_valid.close()
+        # tf_writer_test.close()
         ril_writer_train.close()
         ril_writer_valid.close()
         ril_writer_test.close()
@@ -133,13 +170,12 @@ def worker_assist(files, label_score, tf_writer, ril_writer):
         sd_image = process_image(file)
 
         # Write tf records
-        tf_record = wrap_image(sd_image, label_score)
-        tf_writer.write(tf_record.SerializeToString())
+        #tf_record = wrap_image(sd_image, label_score)
+        #tf_writer.write(tf_record.SerializeToString())
 
         # Write ril records
-        line = {"img": np.array(sd_image).tolist(), "label": label_score}
-        json.dump(line, ril_writer)
-        ril_writer.write("\n")
+        line = {"img": sd_image, "label": label_score}
+        pickle.dump(line, ril_writer, pickle.HIGHEST_PROTOCOL)
 
 
 def process_image(im_path):
@@ -181,7 +217,7 @@ def wrap_image(image, label_score):
     :return:
     """
     example = tf.train.Example(features=tf.train.Features(feature={
-        "image": bytes_feature(image.tostring()),
+        "img": bytes_feature(image.tostring()),
         "label": int64_feature(label_score)}))
 
     return example
