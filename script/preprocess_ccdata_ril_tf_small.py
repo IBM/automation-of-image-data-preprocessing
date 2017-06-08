@@ -17,7 +17,7 @@ from sentana.utils.tf_utils import int64_feature
 
 
 IM_DIR = "/dccstor/sentana/sentana/cc_data"
-OUT_DIR = "/dccstor/sentana/sentana/model/cc_data"
+OUT_DIR = "/dccstor/sentana/sentana/model"
 LABEL = "/dccstor/sentana/sentana/Dataset_Vso/ANPs/3244ANPs.txt"
 IM_SIZE = 256
 
@@ -35,38 +35,32 @@ def process():
     labels = os.listdir(IM_DIR)
     labels = [l for l in labels if not l.startswith(".")
               and l in label_dict.keys()]
+    random.shuffle(labels)
+
     jobs = []
-    lpp = int(len(labels) / 4)
+    lpp = 100
     for i in range(4):
-        if i < 3:
-            p = multiprocessing.Process(
-                target=worker, args=(labels[i*lpp:(i+1)*lpp], label_dict))
-        else:
-            p = multiprocessing.Process(target=worker,
-                                        args=(labels[i*lpp:], label_dict))
+        p = multiprocessing.Process(target=worker,
+            args=(labels[i*lpp:(i+1)*lpp], label_dict, "cc_data" + str(i)))
 
         jobs.append(p)
         p.start()
         p.join()
         print(p.pid)
 
-    # Start merging
-    print("Start merging...")
-    multiprocessing.Process(target=merge, args=(labels, "train")).start()
-    multiprocessing.Process(target=merge, args=(labels, "valid")).start()
-    multiprocessing.Process(target=merge, args=(labels, "test")).start()
 
-
-def merge(labels, part):
+def merge(labels, dataset, part):
     """
     Randomly merge bz2 files together.
     :param labels:
+    :param dataset:
     :param part:
     :return:
     """
-    files = [os.path.join(OUT_DIR, part, l + ".bz2") for l in labels]
+    files = [os.path.join(OUT_DIR, dataset, part, l + ".bz2") for l in labels]
     readers = [bz2.BZ2File(file, "rb") for file in files]
-    writer = bz2.BZ2File(os.path.join(OUT_DIR, part, part + ".bz2"), "wb")
+    writer = bz2.BZ2File(os.path.join(OUT_DIR, dataset, part,
+                                      part + ".bz2"), "wb")
 
     while len(readers) > 0:
         random.shuffle(readers)
@@ -80,7 +74,7 @@ def merge(labels, part):
                 del readers[i]
                 break
 
-            if np.random.rand() < 0.01: break
+            if np.random.rand() < 0.3: break
 
     writer.close()
 
@@ -106,49 +100,55 @@ def get_labels(filename):
     return label_dict, anp_dict
 
 
-def worker(labels, label_dict):
+def worker(labels, label_dict, dataset):
     """
     This function is run in parallel.
     :param labels:
     :param label_dict:
+    :param dataset:
     :return:
     """
     for label in labels:
-        # # Writers for tfrecords
-        # tf_writer_train = tf.python_io.TFRecordWriter(os.path.join(
-        #     OUT_DIR, "tf_train", label + ".tftrain"))
-        # tf_writer_valid = tf.python_io.TFRecordWriter(os.path.join(
-        #     OUT_DIR, "tf_valid", label + ".tfvalid"))
-        # tf_writer_test = tf.python_io.TFRecordWriter(os.path.join(
-        #     OUT_DIR, "tf_test", label + ".tftest"))
+        # Writers for tfrecords
+        tf_writer_train = tf.python_io.TFRecordWriter(os.path.join(
+            OUT_DIR, dataset, "tf_train", label + ".tftrain"))
+        tf_writer_valid = tf.python_io.TFRecordWriter(os.path.join(
+            OUT_DIR, dataset, "tf_valid", label + ".tfvalid"))
+        tf_writer_test = tf.python_io.TFRecordWriter(os.path.join(
+            OUT_DIR, dataset, "tf_test", label + ".tftest"))
 
         # Writer for ril
-        ril_writer_train = bz2.BZ2File(os.path.join(OUT_DIR, "train",
+        ril_writer_train = bz2.BZ2File(os.path.join(OUT_DIR, dataset, "train",
                                                     label + ".bz2"), "wb")
-        ril_writer_valid = bz2.BZ2File(os.path.join(OUT_DIR, "valid",
+        ril_writer_valid = bz2.BZ2File(os.path.join(OUT_DIR, dataset, "valid",
                                                     label + ".bz2"), "wb")
-        ril_writer_test = bz2.BZ2File(os.path.join(OUT_DIR, "test",
+        ril_writer_test = bz2.BZ2File(os.path.join(OUT_DIR, dataset, "test",
                                                    label + ".bz2"), "wb")
 
         # Process images for each label
         files = os.listdir(os.path.join(IM_DIR, label))
         files = [os.path.join(IM_DIR, label, f) for f in files
-                 if not f.startswith(".")]
+            if not f.startswith(".") and os.path.getsize(
+                os.path.join(IM_DIR, label, f)) > 3051]
         label_score = 1 if label_dict[label] >= 0 else 0
 
-        worker_assist(files[:int(0.8*len(files))], label_score,
-                      tf_writer=None, ril_writer=ril_writer_train)
-        worker_assist(files[int(0.8*len(files)):int(0.9*len(files))],
-                      label_score, tf_writer=None, ril_writer=ril_writer_valid)
-        worker_assist(files[int(0.9*len(files)):], label_score,
-                      tf_writer=None, ril_writer=ril_writer_test)
+        worker_assist(files[:10], label_score, tf_writer=tf_writer_train,
+                      ril_writer=ril_writer_train)
+        worker_assist(files[10:12], label_score, tf_writer=tf_writer_valid,
+                      ril_writer=ril_writer_valid)
+        worker_assist(files[12:14], label_score, tf_writer=tf_writer_test,
+                      ril_writer=ril_writer_test)
 
-        # tf_writer_train.close()
-        # tf_writer_valid.close()
-        # tf_writer_test.close()
+        tf_writer_train.close()
+        tf_writer_valid.close()
+        tf_writer_test.close()
         ril_writer_train.close()
         ril_writer_valid.close()
         ril_writer_test.close()
+
+    merge(labels, dataset, "train")
+    merge(labels, dataset, "valid")
+    merge(labels, dataset, "test")
 
     return
 
@@ -170,8 +170,8 @@ def worker_assist(files, label_score, tf_writer, ril_writer):
         sd_image = process_image(file)
 
         # Write tf records
-        #tf_record = wrap_image(sd_image, label_score)
-        #tf_writer.write(tf_record.SerializeToString())
+        tf_record = wrap_image(sd_image, label_score)
+        tf_writer.write(tf_record.SerializeToString())
 
         # Write ril records
         line = {"img": sd_image, "label": label_score}
