@@ -5,6 +5,8 @@ Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 import cv2 as cv
 import numpy as np
 
+from sentana.config.cf_container import Config as cf
+
 
 class EnvSim(object):
     """
@@ -17,7 +19,10 @@ class EnvSim(object):
         """
         self._state = state
         self._label = label
+
+        # For internal use
         self._age = 0
+        #self._origin = state
 
     @property
     def get_label(self):
@@ -46,13 +51,20 @@ class EnvSim(object):
         self._label = label
         self._age = 0
 
-    def step(self, action):
+    def step(self, action, qout):
         """
         Step one step in the environment.
         :param action:
+        :param qout:
         :return:
         """
+        # Recover image when it is overaged
         self._age += 1
+        if self._age > cf.max_age:
+            #self._age = 0
+            #self._state = self._origin
+            action = 0 if qout > 0 else 1
+
         if action == 0 or action == 1:
             state = self._state
             if self._label == action: reward = 1
@@ -94,7 +106,7 @@ class EnvSim(object):
             reward = 0
             done = False
 
-        return state, reward, done
+        return state, reward, done, action
 
     def _flip(self, flip_code):
         """

@@ -121,35 +121,11 @@ class BaseGraph(metaclass=abc.ABCMeta):
         return self._targets
 
     @property
-    def get_next_actions(self):
-        """
-        Get best action for next step.
-        :return:
-        """
-        return self._action_out
-
-    @property
-    def get_actions(self):
-        """
-        Get action in.
-        :return:
-        """
-        return self._actions
-
-    @property
     def get_instances(self):
         """
         Get input instances.
         :return:
         """
         return self._instances
-
-    @property
-    def get_qmax(self):
-        """
-        Get max Q value.
-        :return:
-        """
-        return self._qmax
 
 

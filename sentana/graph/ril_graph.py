@@ -39,9 +39,43 @@ class RILGraph(BaseGraph):
             self._actions = tf.placeholder(tf.int32, shape=[None])
             self._targets = tf.placeholder(tf.float32, shape=[None])
 
-        (q_out, self._action_out, self._qmax) = self._inference(self._instances)
+        (self._qout, self._aout, self._qmax) = self._inference(self._instances)
         action_onehot = tf.one_hot(self._actions, depth=cf.num_action, axis=-1,
                                    dtype=tf.float32)
-        self._preds = tf.reduce_sum(tf.multiply(q_out, action_onehot), axis=1)
+        self._preds = tf.reduce_sum(tf.multiply(
+            self._qout, action_onehot), axis=1)
         self._obj_func = self._loss(self._preds, self._targets)
         self._train_step = self._train(self._obj_func)
+
+    @property
+    def get_next_actions(self):
+        """
+        Get best action for next step.
+        :return:
+        """
+        return self._aout
+
+    @property
+    def get_actions(self):
+        """
+        Get action in.
+        :return:
+        """
+        return self._actions
+
+    @property
+    def get_qmax(self):
+        """
+        Get max Q value.
+        :return:
+        """
+        return self._qmax
+
+    @property
+    def get_qout(self):
+        """
+        Get Q values.
+        :return:
+        """
+        return self._qout
+

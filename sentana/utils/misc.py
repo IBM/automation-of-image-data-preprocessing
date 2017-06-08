@@ -46,3 +46,11 @@ def weighted_pick(weights):
 
     return int(np.searchsorted(t, np.random.rand(1) * s))
 
+
+def pause():
+    """
+    Pause the program until enter key pressed.
+    :return:
+    """
+    programPause = input("Press the <ENTER> key to continue...")
+

@@ -29,17 +29,15 @@ class QNetwork(BaseArch):
         Build the concrete Q network.
         :return:
         """
-        initializer = tf.truncated_normal_initializer(stddev=0.01,
-                                                      dtype=tf.float32)
+        initializer = tf.truncated_normal_initializer(dtype=tf.float32,
+                                                      stddev=0.1)
 
         with tf.variable_scope("conv1") as scope:
-            kernel = declare_variable_weight_decay(name="kernel",
-                                                   shape=[11, 11, 3, 96],
-                                                   initializer=initializer,
-                                                   wd=0.0)
-            conv = tf.nn.conv2d(self._instance, kernel, [1, 4, 4, 1],
-                                padding="VALID")
-            bias = declare_variable(name="bias", shape=[96],
+            kernel = declare_variable_weight_decay(initializer=initializer,
+                                                   name="kernel", wd=0.0,
+                                                   shape=[11, 11, 3, 6])
+            conv = tf.nn.conv2d(self._instance, kernel, [1, 4, 4, 1], "VALID")
+            bias = declare_variable(name="bias", shape=[6],
                                     initializer=initializer)
             pre_activation = tf.nn.bias_add(conv, bias)
             conv1 = tf.nn.relu(pre_activation, name=scope.name)
@@ -47,16 +45,14 @@ class QNetwork(BaseArch):
 
         pool1 = tf.reduce_max(conv1, reduction_indices=[3],
                               keep_dims=True, name="pool1")
-        norm1 = tf.nn.lrn(input=pool1, depth_radius=4, bias=1.0,
-                          alpha=0.001 / 9.0, beta=0.75, name="norm1")
+        #norm1 = tf.nn.lrn(input=pool1, name="norm1")
 
         with tf.variable_scope("conv2") as scope:
-            kernel = declare_variable_weight_decay(name="kernel",
-                                                   shape=[5, 5, 1, 256],
-                                                   initializer=initializer,
-                                                   wd=0.0)
-            conv = tf.nn.conv2d(norm1, kernel, [1, 2, 2, 1], padding="VALID")
-            bias = declare_variable(name="bias", shape=[256],
+            kernel = declare_variable_weight_decay(initializer=initializer,
+                                                   name="kernel", wd=0.0,
+                                                   shape=[5, 5, 1, 5])
+            conv = tf.nn.conv2d(pool1, kernel, [1, 2, 2, 1], padding="VALID")
+            bias = declare_variable(name="bias", shape=[5],
                                     initializer=initializer)
             pre_activation = tf.nn.bias_add(conv, bias)
             conv2 = tf.nn.relu(pre_activation, name=scope.name)
@@ -64,40 +60,26 @@ class QNetwork(BaseArch):
 
         pool2 = tf.reduce_max(conv2, reduction_indices=[3],
                               keep_dims=True, name="pool2")
-        norm2 = tf.nn.lrn(input=pool2, depth_radius=4, bias=1.0,
-                          alpha=0.001 / 9.0, beta=0.75, name="norm2")
+        #norm2 = tf.nn.lrn(input=pool2, name="norm2")
 
-        with tf.variable_scope("fc1") as scope:
-            shape = norm2.get_shape().as_list()
+        with tf.variable_scope("fc") as scope:
+            shape = pool2.get_shape().as_list()
             dim = shape[1] * shape[2]
-            reshape = tf.reshape(norm2, [-1, dim])
+            rsh = tf.reshape(pool2, [-1, dim])
             weights = declare_variable_weight_decay(name="weight",
-                                                    shape=[dim, 512],
-                                                    initializer=initializer,
-                                                    wd=0.0)
-            bias = declare_variable(name="bias", shape=[512],
+                initializer=xavier_init(dim, 16), wd=0.0)
+            bias = declare_variable(name="bias", shape=[16],
                                     initializer=initializer)
-            fc1 = tf.nn.relu(tf.matmul(reshape, weights) + bias,
-                             name=scope.name)
-            activation_summary(fc1)
-
-        with tf.variable_scope("fc2") as scope:
-            weights = declare_variable_weight_decay(name="weight",
-                                                    shape=[512, 512],
-                                                    initializer=initializer,
-                                                    wd=0.0)
-            bias = declare_variable(name="bias", shape=[512],
-                                    initializer=initializer)
-            fc2 = tf.nn.relu(tf.matmul(fc1, weights) + bias, name=scope.name)
-            activation_summary(fc2)
+            fc = tf.matmul(rsh, weights) + bias
+            activation_summary(fc)
 
         # Implement the Dual-Q network
         # Split into separate advantage and value
-        pre_adv, pre_val = tf.split(value=fc2, num_split=2, split_dim=1)
+        pre_adv, pre_val = tf.split(value=fc, num_split=2, split_dim=1)
         w_adv = declare_variable_weight_decay(name="w_adv", wd=0.0,
-                                              shape=[256, cf.num_action],
+                                              shape=[8, cf.num_action],
                                               initializer=initializer)
-        w_val = declare_variable_weight_decay(name="w_val", shape=[256, 1],
+        w_val = declare_variable_weight_decay(name="w_val", shape=[8, 1],
                                               initializer=initializer, wd=0.0)
         advantage = tf.matmul(pre_adv, w_adv)
         value = tf.matmul(pre_val, w_val)

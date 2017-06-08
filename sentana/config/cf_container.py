@@ -27,8 +27,10 @@ class Config(object):
     num_action = int(config_parser.get("ril_param", "num_action"))
     exploration = float(config_parser.get("ril_param", "exploration"))
     min_explore = float(config_parser.get("ril_param", "min_explore"))
-    dec_explore = float(config_parser.get("ril_param", "dec_explore"))
+    anneal_step = float(config_parser.get("ril_param", "anneal_step"))
     gamma = float(config_parser.get("ril_param", "gamma"))
     update_freq = int(config_parser.get("ril_param", "update_freq"))
     train_size = int(config_parser.get("ril_param", "train_size"))
+    max_age = int(config_parser.get("ril_param", "max_age"))
+
 

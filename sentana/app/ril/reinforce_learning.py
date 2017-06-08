@@ -68,26 +68,32 @@ class ReInLearning(object):
                     warnings.warn("Model not exist, train a new model now")
 
             # Initialize an exp buffer for current epoch
-            exp_buf = ExpBuffer(cf.train_size*10)
+            exp_buf = ExpBuffer()
+            step_drop = (cf.exploration - cf.min_explore) / cf.anneal_step
 
             # Start training the policy network
             for epoch in range(cf.num_epoch):
                 # Initialize an environment
                 env = BatchSimEnv()
-                image_batch, batch_size = [], cf.batch_size
+                image_batch, qouts, batch_size = [], [], cf.batch_size
 
                 # Process an epoch
-                num_step, reward_all = 0, 0
+                num_step, reward_all, done_all = 0, 0, 0
                 with open(cf.train_path, "r") as df:
                     while True:
                         # Add more images for batch processing
                         if batch_size > 0:
                             images, labels = self._get_batch(df, batch_size)
                             image_batch.extend(images)
+                            qouts.extend([0] * len(images))
                             env.add(image_batch=images, label_batch=labels)
 
                         # If no image left, then exit the current epoch
-                        if len(image_batch) == 0: break
+                        if len(image_batch) == 0:
+                            print("Epoch %d, final step has accumulated "
+                                  "rewards %g and processed %d images"
+                                  % (epoch, reward_all, done_all))
+                            break
 
                         # Do exploration
                         if np.random.rand(1) < cf.exploration:
@@ -96,13 +102,17 @@ class ReInLearning(object):
 
                         # Select actions using the policy network
                         else:
-                            actions = self._sess.run(rg.get_next_actions,
+                            [actions, qout] = self._sess.run(
+                                [rg.get_next_actions, rg.get_qout],
                                 feed_dict={rg.get_instances: image_batch})
+                            qouts = list(np.array(qouts)+qout[:, 0]-qout[:, 1])
 
                         # Add extra examples to the buffer after doing actions
-                        states, rewards, dones, _, ages = env.step(actions)
+                        states, rewards, dones, _, ages, new_acts = env.step(
+                            actions, qouts)
+
                         extra = []
-                        for (i, a, s, r, d, g) in zip(image_batch, actions,
+                        for (i, a, s, r, d, g) in zip(image_batch, new_acts,
                                                       states, rewards,
                                                       dones, ages):
                             if a < 2:
@@ -110,11 +120,12 @@ class ReInLearning(object):
                                               (i, a, s, r, d, g)])
                             else:
                                 extra.extend([(i, a, s, r, d, g)])
+
                         exp_buf.add(extra)
 
                         # Decrease the exploration
                         if cf.exploration > cf.min_explore:
-                            cf.exploration -= cf.dec_explore
+                            cf.exploration -= step_drop
 
                         # Train and update the policy network
                         if num_step % cf.update_freq == 0:
@@ -128,26 +139,32 @@ class ReInLearning(object):
 
                             qmax = self._sess.run(rg.get_qmax,
                                 feed_dict={rg.get_instances: o_states})
-                            target = i_rewards + (
-                                cf.gamma-0.01*i_ages)*qmax*end_mul
+                            target = i_rewards + cf.gamma*qmax*end_mul
+                            #    cf.gamma-0.02*i_ages)*qmax*end_mul
 
-                            _ = self._sess.run(rg.get_train_step,
+                            #for (i, q) in enumerate(qmax):
+                            #    if q < 0: target[i] = -1
+
+                            [_, err] = self._sess.run([rg.get_train_step, rg.get_error],
                                 feed_dict={rg.get_instances: i_states,
                                            rg.get_actions: i_actions,
                                            rg.get_targets: target})
 
                         # Update input data after 1 step
                         reward_all += sum(rewards)
+                        done_all += sum(dones)
                         num_step += 1
                         batch_size = sum(dones)
                         image_batch = list(compress(states,
                                                     np.logical_not(dones)))
+                        qouts = list(compress(qouts, np.logical_not(dones)))
 
                         # Print rewards after every number of steps
-                        if num_step % 10 == 0:
+                        if num_step % 5 == 0:
                             print("Epoch %d, step %d has accumulated "
                                   "rewards %g and processed %d images"
-                                  % (epoch, num_step, reward_all, sum(dones)))
+                                  " and train error %g"
+                                  % (epoch, num_step, reward_all, done_all, err))
 
             # Save model
             clear_model_dir(os.path.dirname(cf.save_model))
@@ -176,7 +193,7 @@ class ReInLearning(object):
 
             # Initialize an environment
             env = BatchSimEnv()
-            image_batch, label_actual, label_predict = [], [], []
+            image_batch, qouts, label_actual, label_predict = [], [], [], []
             batch_size = cf.batch_size
 
             # Start to test
@@ -186,24 +203,38 @@ class ReInLearning(object):
                     if batch_size > 0:
                         images, labels = self._get_batch(df, batch_size)
                         image_batch.extend(images)
+                        qouts.extend([0]*len(images))
                         env.add(image_batch=images, label_batch=labels)
 
                     # If no image left, then exit
                     if len(image_batch) == 0: break
 
                     # Select actions using the policy network
-                    actions = self._sess.run(rg.get_next_actions,
+                    [actions, qout] = self._sess.run(
+                        [rg.get_next_actions, rg.get_qout],
                         feed_dict={rg.get_instances: image_batch})
+                    qouts = list(np.array(qouts) + qout[:, 0] - qout[:, 1])
 
                     # Do actions
-                    states, rewards, dones, trues, _ = env.step(actions)
+                    states, rewards, dones, trues, ages, new_acts = env.step(
+                        actions, qouts)
                     print(actions)
 
                     # Collect predictions
+                    #complete = [not(a and b) for (a, b) in zip(
+                    #    np.logical_not(dones), ages)]
+                    #age_done = [not(a or b) for (a, b) in zip(dones, ages)]
                     batch_size = sum(dones)
-                    image_batch = list(compress(states, np.logical_not(dones)))
-                    label_predict.extend(list(compress(actions, dones)))
+                    image_batch = list(compress(
+                        states, np.logical_not(dones)))
+                    label_predict.extend(list(compress(new_acts, dones)))
                     label_actual.extend(list(compress(trues, dones)))
+                    #age_pred = [0 if q > 0 else 1 for q in list(
+                    #    compress(qouts, age_done))]
+                    #label_predict.extend(age_pred)
+                    #label_actual.extend(list(compress(trues, age_done)))
+                    qouts = list(compress(qouts, np.logical_not(dones)))
+
                     print("Processed up to %d images" % len(label_predict))
 
             test_err = sum(np.abs(np.array(label_actual)-np.array(

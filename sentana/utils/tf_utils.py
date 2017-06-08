@@ -16,13 +16,18 @@ def declare_variable(name, shape, initializer, dev="cpu"):
     """
     device = "/{}:0".format(dev)
     with tf.device(device):
-        var = tf.get_variable(name=name, shape=shape, initializer=initializer,
-                              dtype=tf.float32)
+        if shape is None:
+            var = tf.get_variable(name=name, dtype=tf.float32,
+                                  initializer=initializer)
+        else:
+            var = tf.get_variable(name=name, shape=shape,
+                                  initializer=initializer,
+                                  dtype=tf.float32)
 
     return var
 
 
-def declare_variable_weight_decay(name, shape, initializer, wd, dev="cpu"):
+def declare_variable_weight_decay(name, initializer, wd, shape=None, dev="cpu"):
     """
     Helper to create an initialized variable with weight decay.
     :param name:
@@ -32,7 +37,8 @@ def declare_variable_weight_decay(name, shape, initializer, wd, dev="cpu"):
     :param dev:
     :return:
     """
-    var = declare_variable(name=name, shape=shape, initializer=initializer,
+    var = declare_variable(name=name, shape=shape,
+                           initializer=initializer,
                            dev=dev)
     weight_decay = tf.multiply(tf.nn.l2_loss(var), wd)
     tf.add_to_collection(tf.GraphKeys.LOSSES, weight_decay)

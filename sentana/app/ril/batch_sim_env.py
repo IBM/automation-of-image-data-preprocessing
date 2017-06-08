@@ -21,24 +21,27 @@ class BatchSimEnv(object):
         """
         self._envs = [EnvSim(i, l) for (i, l) in zip(image_batch, label_batch)]
 
-    def step(self, action_batch):
+    def step(self, action_batch, qouts):
         """
         Step one step for each environment.
         :param action_batch:
+        :param qouts:
         :return:
         """
-        states, rewards, dones, trues, ages = [], [], [], [], []
+        states, rewards, dones, trues, ages, actions = [], [], [], [], [], []
         for (idx, env) in enumerate(self._envs):
-            state, reward, done = env.step(action_batch[idx])
+            state, reward, done, action = env.step(action_batch[idx],
+                                                   qouts[idx])
             states.append(state)
             rewards.append(reward)
             dones.append(done)
             trues.append(env.get_label)
             ages.append(env.get_age)
+            actions.append(action)
 
         self._envs = list(compress(self._envs, np.logical_not(dones)))
 
-        return states, rewards, dones, trues, ages
+        return states, rewards, dones, trues, ages, actions
 
     def add(self, image_batch, label_batch):
         """
