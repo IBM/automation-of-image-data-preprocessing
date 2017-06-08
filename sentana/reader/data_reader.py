@@ -16,12 +16,13 @@ class DataReader(BaseReader):
     This class contains implementations of a data reader that will feed data
     to TensorFlow by using the data pipeline mechanism.
     """
-    def __init__(self, path):
+    def __init__(self, path, num_epoch):
         """
         Initialization.
         :param path:
+        :param num_epoch:
         """
-        super().__init__(path)
+        super().__init__(path, num_epoch)
 
     def _read_and_decode(self, file_queue):
         """
@@ -52,7 +53,7 @@ class DataReader(BaseReader):
         file_names = [os.path.join(self._path, f) for f in file_names]
 
         file_queue = tf.train.string_input_producer(file_names,
-                                                    num_epochs=cf.num_epoch)
+                                                    num_epochs=self._num_epoch)
 
         # Even when reading in multiple threads, share the file queue
         image, label = self._read_and_decode(file_queue)

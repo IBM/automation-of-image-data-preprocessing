@@ -10,7 +10,7 @@ class ExpBuffer(object):
     This is a utility class used to stored train data of a reinforcement
     learning algorithm.
     """
-    def __init__(self, buf_size=10000):
+    def __init__(self, buf_size=50000):
         """
         Initialize the buffer.
         :param buffer_size:

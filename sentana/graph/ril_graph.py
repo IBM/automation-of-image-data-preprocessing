@@ -20,12 +20,13 @@ class RILGraph(BaseGraph):
         Initialization of building a graph.
         :param data_path:
         """
-        super().__init__(data_path)
+        super().__init__(data_path, None)
 
-    def _build_model(self, data_path):
+    def _build_model(self, data_path, num_epoch):
         """
         Build the total graph.
         :param data_path:
+        :param num_epoch:
         :return:
         """
         if data_path is not None:

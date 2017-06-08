@@ -4,13 +4,14 @@ Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
 import os
 from os.path import expanduser
+import sys
 
 import tensorflow as tf
 import warnings
-from itertools import islice
 from itertools import compress
-import ast
 import numpy as np
+import bz2
+import pickle
 
 from sentana.graph.ril_graph import RILGraph
 from sentana.config.cf_container import Config as cf
@@ -35,12 +36,13 @@ class ReInLearning(object):
         :return:
         """
         image_batch, label_batch = [], []
-        lines = islice(data_file, batch_size)
-        for line in lines:
-            line = ast.literal_eval(line)
-            (image, label) = (line["img"], line["label"])
-            image_batch.append(np.array(image))
-            label_batch.append(label)
+        for _ in range(batch_size):
+            try:
+                line = pickle.load(data_file)
+                image_batch.append(line["img"])
+                label_batch.append(line["label"])
+            except EOFError:
+                break
 
         return image_batch, label_batch
 
@@ -72,6 +74,7 @@ class ReInLearning(object):
             step_drop = (cf.exploration - cf.min_explore) / cf.anneal_step
 
             # Start training the policy network
+            early_stop, best_valid = 0, sys.maxsize
             for epoch in range(cf.num_epoch):
                 # Initialize an environment
                 env = BatchSimEnv()
@@ -79,7 +82,7 @@ class ReInLearning(object):
 
                 # Process an epoch
                 num_step, reward_all, done_all = 0, 0, 0
-                with open(cf.train_path, "r") as df:
+                with bz2.BZ2File(cf.train_path, "rb") as df:
                     while True:
                         # Add more images for batch processing
                         if batch_size > 0:
@@ -145,7 +148,8 @@ class ReInLearning(object):
                             #for (i, q) in enumerate(qmax):
                             #    if q < 0: target[i] = -1
 
-                            [_, err] = self._sess.run([rg.get_train_step, rg.get_error],
+                            [_, err] = self._sess.run(
+                                [rg.get_train_step, rg.get_error],
                                 feed_dict={rg.get_instances: i_states,
                                            rg.get_actions: i_actions,
                                            rg.get_targets: target})
@@ -160,16 +164,30 @@ class ReInLearning(object):
                         qouts = list(compress(qouts, np.logical_not(dones)))
 
                         # Print rewards after every number of steps
-                        if num_step % 5 == 0:
+                        if num_step % 1 == 0:
                             print("Epoch %d, step %d has accumulated "
-                                  "rewards %g and processed %d images"
-                                  " and train error %g"
-                                  % (epoch, num_step, reward_all, done_all, err))
+                                  "rewards %g and processed %d images "
+                                  "and train error %g" % (epoch, num_step,
+                                    reward_all, done_all, err))
 
-            # Save model
-            clear_model_dir(os.path.dirname(cf.save_model))
-            saver = tf.train.Saver(tf.global_variables())
-            saver.save(self._sess, cf.save_model)
+                valid_err, _, _ = self._valid_test(cf.valid_path, rg)
+                if valid_err < best_valid:
+                    best_valid = valid_err
+                    early_stop = 0
+                    print("Best valid err is %g" % best_valid)
+
+                    # Save model
+                    clear_model_dir(os.path.dirname(cf.save_model))
+                    saver = tf.train.Saver(tf.global_variables())
+                    saver.save(self._sess, cf.save_model)
+                else:
+                    early_stop += 1
+
+                if early_stop >= 3:
+                    if epoch > 3:
+                        print("Exit due to early stopping")
+                        break
+                    else: early_stop = 0
 
     def test_policy(self):
         """
@@ -191,56 +209,66 @@ class ReInLearning(object):
             else:
                 raise IOError("Model not exist")
 
-            # Initialize an environment
-            env = BatchSimEnv()
-            image_batch, qouts, label_actual, label_predict = [], [], [], []
-            batch_size = cf.batch_size
+            # Actual test
+            test_err, label_predict, label_actual = self._valid_test(
+                cf.test_path, rg)
 
-            # Start to test
-            with open(cf.test_path, "r") as df:
-                while True:
-                    # Add more images for batch processing
-                    if batch_size > 0:
-                        images, labels = self._get_batch(df, batch_size)
-                        image_batch.extend(images)
-                        qouts.extend([0]*len(images))
-                        env.add(image_batch=images, label_batch=labels)
+        return test_err, label_predict, label_actual
 
-                    # If no image left, then exit
-                    if len(image_batch) == 0: break
+    def _valid_test(self, data_path, rg):
+        """
+        Common method for validation/test.
+        :param data_path:
+        :param rg:
+        :return:
+        """
+        # Initialize an environment
+        env = BatchSimEnv()
+        image_batch, qouts, label_actual, label_predict = [], [], [], []
+        batch_size = cf.batch_size
 
-                    # Select actions using the policy network
-                    [actions, qout] = self._sess.run(
-                        [rg.get_next_actions, rg.get_qout],
-                        feed_dict={rg.get_instances: image_batch})
-                    qouts = list(np.array(qouts) + qout[:, 0] - qout[:, 1])
+        # Start to test
+        with bz2.BZ2File(data_path, "rb") as df:
+            while True:
+                # Add more images for batch processing
+                if batch_size > 0:
+                    images, labels = self._get_batch(df, batch_size)
+                    image_batch.extend(images)
+                    qouts.extend([0]*len(images))
+                    env.add(image_batch=images, label_batch=labels)
 
-                    # Do actions
-                    states, rewards, dones, trues, ages, new_acts = env.step(
-                        actions, qouts)
-                    print(actions)
+                # If no image left, then exit
+                if len(image_batch) == 0: break
 
-                    # Collect predictions
-                    #complete = [not(a and b) for (a, b) in zip(
-                    #    np.logical_not(dones), ages)]
-                    #age_done = [not(a or b) for (a, b) in zip(dones, ages)]
-                    batch_size = sum(dones)
-                    image_batch = list(compress(
-                        states, np.logical_not(dones)))
-                    label_predict.extend(list(compress(new_acts, dones)))
-                    label_actual.extend(list(compress(trues, dones)))
-                    #age_pred = [0 if q > 0 else 1 for q in list(
-                    #    compress(qouts, age_done))]
-                    #label_predict.extend(age_pred)
-                    #label_actual.extend(list(compress(trues, age_done)))
-                    qouts = list(compress(qouts, np.logical_not(dones)))
+                # Select actions using the policy network
+                [actions, qout] = self._sess.run(
+                    [rg.get_next_actions, rg.get_qout],
+                    feed_dict={rg.get_instances: image_batch})
+                qouts = list(np.array(qouts) + qout[:, 0] - qout[:, 1])
 
-                    print("Processed up to %d images" % len(label_predict))
+                # Do actions
+                states, rewards, dones, trues, ages, new_acts = env.step(
+                    actions, qouts)
 
-            test_err = sum(np.abs(np.array(label_actual)-np.array(
-                label_predict)))/len(label_actual)
-            print("Test error is: %g" % test_err)
+                # Collect predictions
+                #complete = [not(a and b) for (a, b) in zip(
+                #    np.logical_not(dones), ages)]
+                #age_done = [not(a or b) for (a, b) in zip(dones, ages)]
+                batch_size = sum(dones)
+                image_batch = list(compress(
+                    states, np.logical_not(dones)))
+                label_predict.extend(list(compress(new_acts, dones)))
+                label_actual.extend(list(compress(trues, dones)))
+                #age_pred = [0 if q > 0 else 1 for q in list(
+                #    compress(qouts, age_done))]
+                #label_predict.extend(age_pred)
+                #label_actual.extend(list(compress(trues, age_done)))
+                qouts = list(compress(qouts, np.logical_not(dones)))
 
-        return label_predict, label_actual
+                #print("Processed up to %d images" % len(label_predict))
 
+        test_err = sum(np.abs(np.array(label_actual)-np.array(
+            label_predict)))/len(label_actual)
+        print("Test error is: %g" % test_err)
 
+        return test_err, label_predict, label_actual

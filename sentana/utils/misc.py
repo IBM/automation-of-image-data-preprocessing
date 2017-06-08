@@ -18,7 +18,7 @@ def clear_model_dir(mdir):
     if os.path.isdir(mdir):
         shutil.rmtree(mdir)
 
-    os.mkdir(mdir)
+    os.makedirs(mdir)
 
 
 def xavier_init(fan_in, fan_out, const=1, dtype=tf.float32):

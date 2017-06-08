@@ -6,13 +6,12 @@ from sentana.app.vanila.model_runner import ModelRunner
 from sentana.app.ril.reinforce_learning import ReInLearning
 
 
-def letstrain():
-    #mr = ModelRunner()
-    #mr.train_model(cont=False)
-
-    ril = ReInLearning()
-    ril.train_policy(cont=False)
+def letsgo():
+    mr = ModelRunner()
+    mr.train_model(cont=False)
+    test_err, _, _ = mr.test_model()
+    print("Final test error of vanila version after training: %g" % test_err)
 
 
 if __name__ == "__main__":
-    letstrain()
+    letsgo()

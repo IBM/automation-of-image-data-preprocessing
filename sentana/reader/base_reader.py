@@ -12,13 +12,14 @@ class BaseReader(metaclass=abc.ABCMeta):
     It is necessary to extend this class in order to build a complete reader
     for feeding a TensorFlow program.
     """
-    def __init__(self, path):
+    def __init__(self, path, num_epoch):
         # Check if input files are available
         if not os.listdir(path):
             raise FileNotFoundError("Input tfrecords not found")
 
         # Store path to data
         self._path = path
+        self._num_epoch = num_epoch
 
     @abc.abstractmethod
     def get_batch(self):
