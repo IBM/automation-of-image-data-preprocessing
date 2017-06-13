@@ -16,8 +16,8 @@ from sentana.utils.tf_utils import bytes_feature
 from sentana.utils.tf_utils import int64_feature
 
 
-IM_DIR = "/dccstor/sentana/sentana/you_data/images"
-OUT_DIR = "/dccstor/sentana/sentana/model/you_data"
+IM_DIR = "/Users/minhtn/ibm/origin_data/sentana/you_data/images.bk"
+OUT_DIR = "/Users/minhtn/ibm/projects/sentana/data/you_data1"
 IM_SIZE = 256
 
 
@@ -58,7 +58,7 @@ def merge(labels, part):
                 pickle.dump(line, writer)
             except EOFError:
                 r.close()
-                os.remove(r.name)
+                #os.remove(r.name)
                 del readers[i]
                 break
 
@@ -159,10 +159,10 @@ def process_image(im_path):
     crop_im = resize_im[dim0: dim0+IM_SIZE, dim1: dim1+IM_SIZE, :]
 
     # Normalize image
-    dst = np.zeros(shape=crop_im.shape)
-    norm_im = cv.normalize(crop_im, dst, alpha=0, beta=1,
-                           norm_type=cv.NORM_MINMAX, dtype=cv.CV_32F)
-
+    #dst = np.zeros(shape=crop_im.shape)
+    #norm_im = cv.normalize(crop_im, dst, alpha=0, beta=1,
+    #                       norm_type=cv.NORM_MINMAX, dtype=cv.CV_32F)
+    norm_im = crop_im / 255.0
     # Store image
     #names = im_path.split(sep="/")
     #cv.imwrite("/" + os.path.join(*names[:-1], "crop_" + names[-1]), norm_im)
@@ -182,6 +182,41 @@ def wrap_image(image, label_score):
         "label": int64_feature(label_score)}))
 
     return example
+
+
+
+
+
+def merge(labels, part):
+    """
+    Randomly merge bz2 files together.
+    :param labels:
+    :param part:
+    :return:
+    """
+    files = [os.path.join(l, part, part + ".bz2") for l in labels]
+    readers = [bz2.BZ2File(file, "rb") for file in files]
+    writer = bz2.BZ2File(os.path.join(part + ".bz2"), "wb")
+
+    while len(readers) > 0:
+        random.shuffle(readers)
+        for (i, r) in enumerate(readers):
+            try:
+                line = pickle.load(r)
+                pickle.dump(line, writer)
+            except EOFError:
+                r.close()
+                #os.remove(r.name)
+                del readers[i]
+                break
+
+            if np.random.rand() < 0.3: break
+
+    writer.close()
+
+
+
+
 
 
 if __name__ == "__main__":

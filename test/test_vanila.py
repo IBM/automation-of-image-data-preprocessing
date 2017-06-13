@@ -9,9 +9,8 @@ from sentana.app.ril.reinforce_learning import ReInLearning
 def letsgo():
     mr = ModelRunner()
     mr.train_model(cont=False)
-    test_err, _, _ = mr.test_model()
-    print("Final test error of vanila version after training: %g" % test_err)
-
+    p, t = mr.test_model()
+    print(p, t)
 
 if __name__ == "__main__":
     letsgo()

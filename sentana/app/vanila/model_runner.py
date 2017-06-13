@@ -4,11 +4,12 @@ Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
 import os
 import sys
-from os.path import expanduser
 
 import tensorflow as tf
 import numpy as np
 import warnings
+import pickle
+import bz2
 
 from sentana.utils.misc import clear_model_dir
 from sentana.graph.seq_graph import SeqGraph
@@ -22,33 +23,105 @@ class ModelRunner(object):
     def __init__(self):
         pass
 
+    def _get_batch(self, data_file, batch_size):
+        """
+        Get a batch of images for training.
+        :param data_file:
+        :param batch_size:
+        :return:
+        """
+        image_batch, label_batch = [], []
+        for _ in range(batch_size):
+            try:
+                line = pickle.load(data_file)
+                image_batch.append(line["img"])
+                label_batch.append(line["label"])
+            except EOFError:
+                break
+
+        return image_batch, label_batch
+
     @staticmethod
-    def _run_train_step(sess, train_step, error):
+    def _run_train_step(sess, train_step, error, image_input, label_input,
+                        image_batch, label_batch):
         """
         Train a batch of data.
         :param sess:
         :param train_step:
         :param error:
+        :param image_input:
+        :param label_input:
+        :param image_batch:
+        :param label_batch:
         :return: error
         """
-        [_, err] = sess.run([train_step, error])
+        [_, err] = sess.run([train_step, error],
+                            feed_dict={image_input: image_batch,
+                                       label_input: label_batch})
 
         return err
 
     @staticmethod
-    def _run_test_step(sess, preds, trues, error):
+    def _run_test_step(sess, preds, error, image_input, label_input,
+                       image_batch, label_batch):
         """
         Test a batch of data.
         :param sess:
         :param preds:
-        :param trues:
         :param error:
-        :return: error
+        :param image_input:
+        :param label_input:
+        :param image_batch:
+        :param label_batch:
+        :return: error, predictions and targets
         """
-        to_test = [preds, trues, error]
-        [pred, true, err] = sess.run(to_test)
+        to_test = [preds, error]
+        [pred, err] = sess.run(to_test, feed_dict={image_input: image_batch,
+                                                   label_input: label_batch})
 
-        return pred, true, err
+        return pred, err
+
+    def _run_epoch(self, sess, graph, data_path, stage="train"):
+        """
+        Run 1 epoch.
+        :param sess:
+        :param graph:
+        :param data_path:
+        :param stage:
+        :return:
+        """
+        # Store error so far
+        err_list, pred_list, true_list = [], [], []
+
+        # Run epoch
+        with bz2.BZ2File(data_path, "rb") as df:
+            # Read data chunk by chunk
+            while True:
+                images, labels = self._get_batch(df, cf.batch_size)
+                if len(images) == 0: break
+
+                # Batch is not empty
+                if stage == "train":
+                    err = self._run_train_step(sess, graph.get_train_step,
+                        graph.get_error, graph.get_instances,
+                        graph.get_targets, images, labels)
+                    err_list.append(err)
+
+                else:
+                    pred_op = tf.argmax(tf.nn.softmax(graph.get_preds), axis=1)
+                    pred, err = self._run_test_step(sess, pred_op,
+                        graph.get_error, graph.get_instances,
+                        graph.get_targets, images, labels)
+                    err_list.append(err)
+                    pred_list.extend(pred)
+                    true_list.extend(labels)
+
+            performance = -1
+            if stage != "train":
+                performance = sum(np.abs(np.array(pred_list) - np.array(
+                    true_list))) / len(true_list)
+
+        return performance, np.mean(err_list), pred_list, true_list
 
     def train_model(self, cont=False):
         """
@@ -57,7 +130,7 @@ class ModelRunner(object):
         :return:
         """
         with tf.Graph().as_default(), tf.Session() as sess:
-            sg = SeqGraph(cf.train_path, cf.num_epoch)
+            sg = SeqGraph()
             sess.run(tf.group(tf.global_variables_initializer(),
                               tf.local_variables_initializer()))
 
@@ -72,100 +145,46 @@ class ModelRunner(object):
                     warnings.warn("Model not exist, train a new model now")
 
             # Start to train
-            coord = tf.train.Coordinator()
-            threads = tf.train.start_queue_runners(coord=coord)
+            best_valid = sys.maxsize
+            for epoch in range(cf.num_epoch):
+                _, train_err, _, _ = self._run_epoch(sess, sg, cf.train_path)
+                perf, valid_err, _, _ = self._run_epoch(sess, sg, cf.valid_path,
+                                                        stage="valid")
+                print("Epoch %d has training error %g, validation error %g "
+                      "and performance error %g" % (epoch, train_err,
+                                                    valid_err, perf))
 
-            try:
-                step, err_list = 0, []
-                early_stop, best_valid = 0, sys.maxsize
-                while not coord.should_stop():
-                    err = self._run_train_step(sess, sg.get_train_step,
-                                               sg.get_error)
-                    err_list.append(err)
+                if valid_err < best_valid:
+                    best_valid = valid_err
+                    print("Best valid err is %g and performance error is %g"
+                          % (best_valid, perf))
 
-                    step += 1
-                    if step % 1 == 0:
-                        print ("Step %d has error: %g, average error: %g" % (
-                            step, err, np.mean(err_list)))
+                    # Save model
+                    clear_model_dir(os.path.dirname(cf.save_model))
+                    saver = tf.train.Saver(tf.global_variables())
+                    saver.save(sess, cf.save_model)
 
-                    if step % cf.valid_step == 0:
-                        van_path = os.path.join(expanduser("~"), ".sentana",
-                                                "vanila", "tmp_model.ckpt")
-                        clear_model_dir(os.path.dirname(van_path))
-                        saver = tf.train.Saver(tf.global_variables())
-                        saver.save(sess, van_path)
-
-                        valid_err, _, _ = self.test_model(cf.valid_path,
-                                                          van_path)
-                        if valid_err < best_valid:
-                            best_valid = valid_err
-                            early_stop = 0
-                            print("Best valid err is %g" % best_valid)
-
-                            # Save model
-                            clear_model_dir(os.path.dirname(cf.save_model))
-                            saver = tf.train.Saver(tf.global_variables())
-                            saver.save(sess, cf.save_model)
-                        else:
-                            early_stop += 1
-
-                        if early_stop >= 3:
-                            print("Exit due to early stopping")
-                            break
-
-            except tf.errors.OutOfRangeError:
-                print("Finish training without early stopping")
-
-            finally:
-                coord.request_stop()
-
-            coord.join(threads)
-            sess.close()
-
-    def test_model(self, data_path=cf.test_path, model_path=cf.save_model):
+    def test_model(self):
         """
         Main method for testing.
-        :param data_path:
-        :param model_path:
         :return:
         """
         with tf.Graph().as_default(), tf.Session() as sess:
-            sg = SeqGraph(data_path)
+            sg = SeqGraph()
             sess.run(tf.group(tf.global_variables_initializer(),
                               tf.local_variables_initializer()))
 
             # Load the model
             saver = tf.train.Saver(tf.global_variables())
-            ckpt = tf.train.get_checkpoint_state(os.path.dirname(model_path))
+            ckpt = tf.train.get_checkpoint_state(os.path.dirname(cf.save_model))
             if ckpt and ckpt.model_checkpoint_path:
                 saver.restore(sess, ckpt.model_checkpoint_path)
             else:
                 raise IOError("Model not exist")
 
             # Start to test
-            coord = tf.train.Coordinator()
-            threads = tf.train.start_queue_runners(coord=coord)
+            perf, err, pred_list, true_list = self._run_epoch(sess, sg,
+                cf.test_path, stage="test")
+            print("Test and performance error are %g and %g" % (err, perf))
 
-            pred_list, true_list, err_list = [], [], []
-            try:
-                while not coord.should_stop():
-                    preds, trues, err = self._run_test_step(
-                        sess, tf.argmax(sg.get_preds, axis=1),
-                        sg.get_targets, sg.get_error)
-                    pred_list.extend(preds)
-                    true_list.extend(trues)
-                    err_list.append(err)
-
-            except tf.errors.OutOfRangeError:
-                print ("Test error is: %g" % np.mean(err_list))
-
-            finally:
-                coord.request_stop()
-
-            coord.join(threads)
-            sess.close()
-
-        test_err = sum(np.abs(np.array(pred_list)-np.array(
-            true_list)))/len(true_list)
-
-        return test_err, pred_list, true_list
+        return pred_list, true_list

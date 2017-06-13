@@ -33,11 +33,11 @@ class DataReader(BaseReader):
         reader = tf.TFRecordReader()
         _, serialized_example = reader.read(file_queue)
         features = tf.parse_single_example(serialized_example, features={
-            "image": tf.VarLenFeature(tf.string),
+            "img": tf.VarLenFeature(tf.string),
             "label": tf.FixedLenFeature([], tf.int64)})
 
         # Convert from a scalar string tensor to a float tensor and reshape
-        image = tf.reshape(tf.decode_raw(features["image"].values, tf.float32),
+        image = tf.reshape(tf.decode_raw(features["img"].values, tf.float64),
                            [cf.ima_height, cf.ima_width, 3])
         label = features["label"]
 
@@ -60,7 +60,7 @@ class DataReader(BaseReader):
 
         # Collect examples into batch
         images, labels = tf.train.shuffle_batch([image, label],
-            num_threads=3, batch_size=cf.batch_size, min_after_dequeue=100,
+            num_threads=10, batch_size=cf.batch_size, min_after_dequeue=100,
             capacity=100 + 3 * cf.batch_size, allow_smaller_final_batch=True)
 
         return images, labels

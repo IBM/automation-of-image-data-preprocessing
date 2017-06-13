@@ -13,13 +13,13 @@ class BaseGraph(metaclass=abc.ABCMeta):
     """
     This is a base class that helps build the tensorflow graph.
     """
-    def __init__(self, data_path, num_epoch):
+    def __init__(self):
         """
         Initialization of building a graph.
         :param data_path:
         :param num_epoch:
         """
-        self._build_model(data_path, num_epoch)
+        self._build_model()
 
     @staticmethod
     def _declare_inputs(data_reader):
@@ -86,7 +86,7 @@ class BaseGraph(metaclass=abc.ABCMeta):
         """
         Build the total graph.
         :param data_path:
-        :param num_epoch:
+        :param
         :return:
         """
 
@@ -129,5 +129,3 @@ class BaseGraph(metaclass=abc.ABCMeta):
         :return:
         """
         return self._instances
-
-

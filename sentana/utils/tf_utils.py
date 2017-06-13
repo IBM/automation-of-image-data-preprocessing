@@ -60,8 +60,8 @@ def activation_summary(x):
 def int64_feature(value):
     """
     Encode a feature to int64.
-    :param value
-    :return
+    :param value:
+    :return:
     """
     return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
@@ -69,8 +69,42 @@ def int64_feature(value):
 def bytes_feature(value):
     """
     Encode a feature to bytes.
-    :param value
-    :return
+    :param value:
+    :return:
     """
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
+
+def _to_tensor(x, dtype):
+    """Convert the input x to a tensor of type dtype.
+    :param x: An object to be converted (numpy array, list, tensors)
+    :param dtype: The destination type
+    :return: A tensor.
+    """
+    x = tf.convert_to_tensor(x)
+    if x.dtype != dtype:
+        x = tf.cast(x, dtype)
+
+    return x
+
+
+def relu(x, alpha=0, max_value=None):
+    """ Leaky rectified linear unit, with default values, it returns
+    element-wise max(x, 0).
+    :param x: A tensor or variable
+    :param alpha: Slope of negative section (should be smaller than -1)
+    :param max_value: Saturation threshold
+    :return: A tensor
+    """
+    if alpha != 0.:
+        negative_part = tf.nn.relu(-x)
+    x = tf.nn.relu(x)
+    if max_value is not None:
+        max_value = _to_tensor(max_value, x.dtype.base_dtype)
+        zero = _to_tensor(0., x.dtype.base_dtype)
+        x = tf.clip_by_value(x, zero, max_value)
+    if alpha != 0.:
+        alpha = _to_tensor(alpha, x.dtype.base_dtype)
+        x -= alpha * negative_part
+
+    return x

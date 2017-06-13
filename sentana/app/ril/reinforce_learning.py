@@ -164,7 +164,7 @@ class ReInLearning(object):
                         qouts = list(compress(qouts, np.logical_not(dones)))
 
                         # Print rewards after every number of steps
-                        if num_step % 1 == 0:
+                        if num_step % 10 == 0:
                             print("Epoch %d, step %d has accumulated "
                                   "rewards %g and processed %d images "
                                   "and train error %g" % (epoch, num_step,
@@ -183,8 +183,8 @@ class ReInLearning(object):
                 else:
                     early_stop += 1
 
-                if early_stop >= 3:
-                    if epoch > 3:
+                if early_stop >= 300:
+                    if epoch > 30:
                         print("Exit due to early stopping")
                         break
                     else: early_stop = 0

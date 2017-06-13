@@ -13,8 +13,8 @@ from sentana.utils.tf_utils import bytes_feature
 from sentana.utils.tf_utils import int64_feature
 
 
-IM_DIR = "/Users/minhtn/ibm/origin_data/sentana/you_data/images"
-TFRECORD = "/Users/minhtn/ibm/projects/sentana/data/you_data"
+IM_DIR = "/Users/minhtn/ibm/origin_data/sentana/you_data/images.bk"
+TFRECORD = "/Users/minhtn/ibm/projects/sentana/data/you_data2"
 IM_SIZE = 256
 
 
@@ -33,9 +33,10 @@ def process_image(im_path):
     crop_im = resize_im[dim0: dim0+IM_SIZE, dim1: dim1+IM_SIZE, :]
 
     # Normalize image
-    dst = np.zeros(shape=crop_im.shape)
-    norm_im = cv.normalize(crop_im, dst, alpha=0, beta=1,
-                           norm_type=cv.NORM_MINMAX, dtype=cv.CV_32F)
+    #dst = np.zeros(shape=crop_im.shape)
+    #norm_im = cv.normalize(crop_im, dst, alpha=0, beta=1,
+    #                       norm_type=cv.NORM_MINMAX, dtype=cv.CV_32F)
+    norm_im = np.float32(crop_im / 255.0)
 
     # Store image
     #names = im_path.split(sep="/")
@@ -52,7 +53,7 @@ def wrap_image(image, label_index):
     :return:
     """
     example = tf.train.Example(features=tf.train.Features(feature={
-        "image": bytes_feature(image.tostring()),
+        "img": bytes_feature(image.tostring()),
         "label": int64_feature(label_index)}))
 
     return example
