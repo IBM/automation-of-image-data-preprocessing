@@ -82,7 +82,7 @@ class BaseGraph(metaclass=abc.ABCMeta):
         return train_step
 
     @abc.abstractmethod
-    def _build_model(self, data_path, num_epoch):
+    def _build_model(self):
         """
         Build the total graph.
         :param data_path:

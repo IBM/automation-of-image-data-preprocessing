@@ -164,17 +164,17 @@ class ReInLearning(object):
                         qouts = list(compress(qouts, np.logical_not(dones)))
 
                         # Print rewards after every number of steps
-                        if num_step % 10 == 0:
+                        if num_step % 1 == 0:
                             print("Epoch %d, step %d has accumulated "
                                   "rewards %g and processed %d images "
                                   "and train error %g" % (epoch, num_step,
                                     reward_all, done_all, err))
 
-                valid_err, _, _ = self._valid_test(cf.valid_path, rg)
-                if valid_err < best_valid:
-                    best_valid = valid_err
+                re_err, valid_err, _, _ = self._valid_test(cf.valid_path, rg)
+                if re_err < best_valid:
+                    best_valid = re_err
                     early_stop = 0
-                    print("Best valid err is %g" % best_valid)
+                    print("Best valid reward is %g" % (-best_valid))
 
                     # Save model
                     clear_model_dir(os.path.dirname(cf.save_model))
@@ -183,8 +183,8 @@ class ReInLearning(object):
                 else:
                     early_stop += 1
 
-                if early_stop >= 300:
-                    if epoch > 30:
+                if early_stop >= 3000:
+                    if epoch > 3:
                         print("Exit due to early stopping")
                         break
                     else: early_stop = 0
@@ -210,10 +210,10 @@ class ReInLearning(object):
                 raise IOError("Model not exist")
 
             # Actual test
-            test_err, label_predict, label_actual = self._valid_test(
+            re_err, test_err, label_predict, label_actual = self._valid_test(
                 cf.test_path, rg)
 
-        return test_err, label_predict, label_actual
+        return re_err, test_err, label_predict, label_actual
 
     def _valid_test(self, data_path, rg):
         """
@@ -225,7 +225,7 @@ class ReInLearning(object):
         # Initialize an environment
         env = BatchSimEnv()
         image_batch, qouts, label_actual, label_predict = [], [], [], []
-        batch_size = cf.batch_size
+        batch_size, reward_all = cf.batch_size, 0
 
         # Start to test
         with bz2.BZ2File(data_path, "rb") as df:
@@ -254,6 +254,7 @@ class ReInLearning(object):
                 #complete = [not(a and b) for (a, b) in zip(
                 #    np.logical_not(dones), ages)]
                 #age_done = [not(a or b) for (a, b) in zip(dones, ages)]
+                reward_all += sum(rewards)
                 batch_size = sum(dones)
                 image_batch = list(compress(
                     states, np.logical_not(dones)))
@@ -271,4 +272,4 @@ class ReInLearning(object):
             label_predict)))/len(label_actual)
         print("Test error is: %g" % test_err)
 
-        return test_err, label_predict, label_actual
+        return -reward_all, test_err, label_predict, label_actual

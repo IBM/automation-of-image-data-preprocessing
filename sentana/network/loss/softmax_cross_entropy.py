@@ -27,6 +27,6 @@ class SoftmaxCrossEntropy(Loss):
         :return:
         """
         onehot_labels = tf.one_hot(self._trues, depth=2, axis=1)
-        return tf.contrib.losses.softmax_cross_entropy(logits=self._preds,
+        tf.contrib.losses.softmax_cross_entropy(logits=self._preds,
                                                 onehot_labels=onehot_labels,
                                                 weights=weights)

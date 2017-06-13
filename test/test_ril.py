@@ -9,8 +9,9 @@ from sentana.app.ril.reinforce_learning import ReInLearning
 def letsgo():
     ril = ReInLearning()
     ril.train_policy(cont=False)
-    test_err, _, _ = ril.test_policy()
-    print("Final test error of ril version after training: %g" % test_err)
+    re_err, test_err, _, _ = ril.test_policy()
+    print("Final valid reward and test error of ril version: %g"
+          % (-re_err, test_err))
 
 
 if __name__ == "__main__":

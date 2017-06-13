@@ -7,9 +7,8 @@ import tensorflow as tf
 from sentana.network.arch.base_arch import BaseArch
 from sentana.utils.tf_utils import declare_variable
 from sentana.utils.tf_utils import declare_variable_weight_decay
-from sentana.utils.tf_utils import activation_summary
-from sentana.utils.misc import xavier_init
 from sentana.config.cf_container import Config as cf
+from sentana.utils.tf_utils import relu
 
 
 @BaseArch.register
@@ -29,78 +28,46 @@ class QNetwork(BaseArch):
         Build the concrete Q network.
         :return:
         """
-        initializer = tf.truncated_normal_initializer(dtype=tf.float32,
-                                                      stddev=0.1)
+        kern_init = tf.uniform_unit_scaling_initializer()
+        bias_init = tf.uniform_unit_scaling_initializer(factor=0.001)
+        xavi_init = tf.contrib.layers.xavier_initializer()
 
         with tf.variable_scope("conv1") as scope:
-            kernel = declare_variable_weight_decay(initializer=initializer,
-                                                   name="kernel", wd=0.0,
-                                                   shape=[11, 11, 3, 20])
-            conv = tf.nn.conv2d(self._instance, kernel, [1, 4, 4, 1], "VALID")
-            bias = declare_variable(name="bias", shape=[20],
-                                    initializer=initializer)
-            pre_activation = tf.nn.bias_add(conv, bias)
-            conv1 = tf.nn.relu(pre_activation, name=scope.name)
-            activation_summary(conv1)
-
-        pool1 = tf.reduce_max(conv1, reduction_indices=[3],
-                              keep_dims=True, name="pool1")
-        #norm1 = tf.nn.lrn(input=pool1, name="norm1")
+            kernel = declare_variable_weight_decay(initializer=kern_init,
+                name="kernel", wd=0.0, shape=[4, 4, 3, 10])
+            conv = tf.nn.conv2d(tf.cast(self._instance, tf.float32),
+                                kernel, [1, 2, 2, 1], "VALID")
+            bias = declare_variable(name="bias", shape=[10],
+                                    initializer=bias_init)
+            pool1 = tf.reduce_max(relu(tf.nn.bias_add(conv, bias)),
+                reduction_indices=[3], keep_dims=True, name="pool")
 
         with tf.variable_scope("conv2") as scope:
-            kernel = declare_variable_weight_decay(initializer=initializer,
-                                                   name="kernel", wd=0.0,
-                                                   shape=[5, 5, 1, 20])
+            kernel = declare_variable_weight_decay(initializer=kern_init,
+                name="kernel", wd=0.0, shape=[3, 3, 1, 5])
             conv = tf.nn.conv2d(pool1, kernel, [1, 2, 2, 1], padding="VALID")
-            bias = declare_variable(name="bias", shape=[20],
-                                    initializer=initializer)
-            pre_activation = tf.nn.bias_add(conv, bias)
-            conv2 = tf.nn.relu(pre_activation, name=scope.name)
-            activation_summary(conv2)
-
-        pool2 = tf.reduce_max(conv2, reduction_indices=[3],
-                              keep_dims=True, name="pool2")
-        #norm2 = tf.nn.lrn(input=pool2, name="norm2")
+            bias = declare_variable(name="bias", shape=[5],
+                                    initializer=bias_init)
+            pool2 = tf.reduce_max(relu(tf.nn.bias_add(conv, bias)),
+                reduction_indices=[3], keep_dims=True, name="pool")
 
         with tf.variable_scope("fc1") as scope:
             shape = pool2.get_shape().as_list()
             dim = shape[1] * shape[2]
             rsh = tf.reshape(pool2, [-1, dim])
-            weights = declare_variable_weight_decay(name="weight",
-                initializer=xavier_init(dim, 32), wd=0.0)
-            bias = declare_variable(name="bias", shape=[32],
-                                    initializer=initializer)
-            fc1 = tf.nn.relu(tf.matmul(rsh, weights) + bias, name=scope.name)
-            activation_summary(fc1)
-
-        with tf.variable_scope("fc2") as scope:
-            weights = declare_variable_weight_decay(name="weight",
-                                                    shape=[32, 16],
-                                                    initializer=initializer,
-                                                    wd=0.0)
-            bias = declare_variable(name="bias", shape=[16],
-                                    initializer=initializer)
-            fc2 = tf.nn.relu(tf.matmul(fc1, weights) + bias, name=scope.name)
-            activation_summary(fc2)
-
-        with tf.variable_scope("fc3") as scope:
-            weights = declare_variable_weight_decay(name="weight",
-                                                    shape=[16, 8],
-                                                    initializer=initializer,
-                                                    wd=0.0)
-            bias = declare_variable(name="bias", shape=[8],
-                                    initializer=initializer)
-            fc3 = tf.nn.relu(tf.matmul(fc2, weights) + bias, name=scope.name)
-            activation_summary(fc3)
+            weights = declare_variable_weight_decay(initializer=xavi_init,
+                name="weight", shape=[dim, 128], wd=0.0)
+            bias = declare_variable(name="bias", shape=[128],
+                                    initializer=bias_init)
+            fc1 = tf.nn.bias_add(tf.matmul(rsh, weights), bias)
 
         # Implement the Dual-Q network
         # Split into separate advantage and value
-        pre_adv, pre_val = tf.split(value=fc3, num_split=2, split_dim=1)
-        w_adv = declare_variable_weight_decay(name="w_adv", wd=0.0,
-                                              shape=[4, cf.num_action],
-                                              initializer=initializer)
-        w_val = declare_variable_weight_decay(name="w_val", shape=[4, 1],
-                                              initializer=initializer, wd=0.0)
+        pre_adv, pre_val = tf.split(value=fc1, num_split=2, split_dim=1)
+        w_adv = declare_variable_weight_decay(initializer=xavi_init,
+            name="w_adv", wd=0.0, shape=[64, cf.num_action])
+        w_val = declare_variable_weight_decay(initializer=xavi_init,
+            name="w_val", shape=[64, 1], wd=0.0)
         advantage = tf.matmul(pre_adv, w_adv)
         value = tf.matmul(pre_val, w_val)
 
