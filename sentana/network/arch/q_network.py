@@ -29,7 +29,7 @@ class QNetwork(BaseArch):
         :return:
         """
         kern_init = tf.uniform_unit_scaling_initializer()
-        bias_init = tf.uniform_unit_scaling_initializer(factor=0.001)
+        bias_init = tf.uniform_unit_scaling_initializer(factor=0.0001)
         xavi_init = tf.contrib.layers.xavier_initializer()
 
         with tf.variable_scope("conv1") as scope:
@@ -51,10 +51,55 @@ class QNetwork(BaseArch):
             pool2 = tf.reduce_max(relu(tf.nn.bias_add(conv, bias)),
                 reduction_indices=[3], keep_dims=True, name="pool")
 
+        with tf.variable_scope("conv3") as scope:
+            kernel = declare_variable_weight_decay(initializer=kern_init,
+                name="kernel", wd=0.0, shape=[3, 3, 1, 5])
+            conv = tf.nn.conv2d(pool2, kernel, [1, 2, 2, 1], padding="VALID")
+            bias = declare_variable(name="bias", shape=[5],
+                                    initializer=bias_init)
+            pool3 = tf.reduce_max(relu(tf.nn.bias_add(conv, bias)),
+                reduction_indices=[3], keep_dims=True, name="pool")
+
+        with tf.variable_scope("conv4") as scope:
+            kernel = declare_variable_weight_decay(initializer=kern_init,
+                name="kernel", wd=0.0, shape=[3, 3, 1, 5])
+            conv = tf.nn.conv2d(pool3, kernel, [1, 2, 2, 1], padding="VALID")
+            bias = declare_variable(name="bias", shape=[5],
+                                    initializer=bias_init)
+            pool4 = tf.reduce_max(relu(tf.nn.bias_add(conv, bias)),
+                reduction_indices=[3], keep_dims=True, name="pool")
+
+        with tf.variable_scope("conv5") as scope:
+            kernel = declare_variable_weight_decay(initializer=kern_init,
+                name="kernel", wd=0.0, shape=[3, 3, 1, 5])
+            conv = tf.nn.conv2d(pool4, kernel, [1, 2, 2, 1], padding="VALID")
+            bias = declare_variable(name="bias", shape=[5],
+                                    initializer=bias_init)
+            pool5 = tf.reduce_max(relu(tf.nn.bias_add(conv, bias)),
+                reduction_indices=[3], keep_dims=True, name="pool")
+
+        with tf.variable_scope("conv6") as scope:
+            kernel = declare_variable_weight_decay(initializer=kern_init,
+                name="kernel", wd=0.0, shape=[3, 3, 1, 5])
+            conv = tf.nn.conv2d(pool5, kernel, [1, 2, 2, 1], padding="VALID")
+            bias = declare_variable(name="bias", shape=[5],
+                                    initializer=bias_init)
+            pool6 = tf.reduce_max(relu(tf.nn.bias_add(conv, bias)),
+                reduction_indices=[3], keep_dims=True, name="pool")
+
+        with tf.variable_scope("conv7") as scope:
+            kernel = declare_variable_weight_decay(initializer=kern_init,
+                name="kernel", wd=0.0, shape=[3, 3, 1, 5])
+            conv = tf.nn.conv2d(pool6, kernel, [1, 2, 2, 1], padding="VALID")
+            bias = declare_variable(name="bias", shape=[5],
+                                    initializer=bias_init)
+            pool7 = tf.reduce_max(relu(tf.nn.bias_add(conv, bias)),
+                reduction_indices=[3], keep_dims=True, name="pool")
+
         with tf.variable_scope("fc1") as scope:
-            shape = pool2.get_shape().as_list()
+            shape = pool7.get_shape().as_list()
             dim = shape[1] * shape[2]
-            rsh = tf.reshape(pool2, [-1, dim])
+            rsh = tf.reshape(pool7, [-1, dim])
             weights = declare_variable_weight_decay(initializer=xavi_init,
                 name="weight", shape=[dim, 128], wd=0.0)
             bias = declare_variable(name="bias", shape=[128],

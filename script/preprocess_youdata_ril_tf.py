@@ -185,9 +185,9 @@ def wrap_image(image, label_score):
 
 
 
+################################################################################
 
-
-def merge(labels, part):
+def simple_merge(labels, part):
     """
     Randomly merge bz2 files together.
     :param labels:
@@ -233,7 +233,7 @@ def extract(part, num):
 
     reader.close()
     writer.close()
-
+################################################################################
 
 
 
