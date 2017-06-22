@@ -164,7 +164,7 @@ class ReInLearning(object):
                         qouts = list(compress(qouts, np.logical_not(dones)))
 
                         # Print rewards after every number of steps
-                        if num_step % 1 == 0:
+                        if num_step % 100 == 0:
                             print("Epoch %d, step %d has accumulated "
                                   "rewards %g and processed %d images "
                                   "and train error %g" % (epoch, num_step,
@@ -180,6 +180,7 @@ class ReInLearning(object):
                     clear_model_dir(os.path.dirname(cf.save_model))
                     saver = tf.train.Saver(tf.global_variables())
                     saver.save(self._sess, cf.save_model)
+
                 else:
                     early_stop += 1
 
@@ -187,6 +188,7 @@ class ReInLearning(object):
                     if epoch > 3:
                         print("Exit due to early stopping")
                         break
+
                     else: early_stop = 0
 
     def test_policy(self):
@@ -273,3 +275,20 @@ class ReInLearning(object):
         print("Test error is: %g" % test_err)
 
         return -reward_all, test_err, label_predict, label_actual
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
