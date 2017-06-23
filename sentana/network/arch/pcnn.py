@@ -31,7 +31,7 @@ class PCNN(BaseArch):
         :return:
         """
         kern_init = tf.uniform_unit_scaling_initializer()
-        bias_init = tf.uniform_unit_scaling_initializer(factor=0.001)
+        bias_init = tf.uniform_unit_scaling_initializer(factor=0.0000001)
         xavi_init = tf.contrib.layers.xavier_initializer()
 
         with tf.variable_scope("conv1") as scope:
@@ -41,8 +41,9 @@ class PCNN(BaseArch):
                                 kernel, [1, 2, 2, 1], "VALID")
             bias = declare_variable(name="bias", shape=[10],
                                     initializer=bias_init)
-            pool1 = tf.reduce_max(relu(tf.nn.bias_add(conv, bias)),
+            pool = tf.reduce_max(relu(tf.nn.bias_add(conv, bias)),
                 reduction_indices=[3], keep_dims=True, name="pool")
+            pool1 = tf.nn.lrn(input=pool, name="norm_pool")
 
         with tf.variable_scope("conv2") as scope:
             kernel = declare_variable_weight_decay(initializer=kern_init,
@@ -50,8 +51,9 @@ class PCNN(BaseArch):
             conv = tf.nn.conv2d(pool1, kernel, [1, 2, 2, 1], padding="VALID")
             bias = declare_variable(name="bias", shape=[5],
                                     initializer=bias_init)
-            pool2 = tf.reduce_max(relu(tf.nn.bias_add(conv, bias)),
+            pool = tf.reduce_max(relu(tf.nn.bias_add(conv, bias)),
                 reduction_indices=[3], keep_dims=True, name="pool")
+            pool2 = tf.nn.lrn(input=pool, name="norm_pool")
 
         with tf.variable_scope("fc1") as scope:
             shape = pool2.get_shape().as_list()
@@ -71,3 +73,12 @@ class PCNN(BaseArch):
             fc2 = tf.nn.bias_add(tf.matmul(fc1, weights), bias)
 
         return fc2
+
+
+
+
+
+
+
+
+

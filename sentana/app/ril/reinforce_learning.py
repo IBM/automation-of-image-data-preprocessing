@@ -143,6 +143,7 @@ class ReInLearning(object):
                             qmax = self._sess.run(rg.get_qmax,
                                 feed_dict={rg.get_instances: o_states})
                             target = i_rewards + cf.gamma*qmax*end_mul
+                            target[np.where(target < 0)] = 0
                             #    cf.gamma-0.02*i_ages)*qmax*end_mul
 
                             #for (i, q) in enumerate(qmax):
@@ -164,7 +165,7 @@ class ReInLearning(object):
                         qouts = list(compress(qouts, np.logical_not(dones)))
 
                         # Print rewards after every number of steps
-                        if num_step % 100 == 0:
+                        if num_step % 10 == 0:
                             print("Epoch %d, step %d has accumulated "
                                   "rewards %g and processed %d images "
                                   "and train error %g" % (epoch, num_step,
