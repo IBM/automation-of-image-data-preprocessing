@@ -36,6 +36,13 @@ class ExpBuffer(object):
         """
         return random.sample(self._buffer, min(size, len(self._buffer)))
 
+    def get_size(self):
+        """
+        Get current size of the buffer.
+        :return:
+        """
+        return len(self._buffer)
+
 
 
 

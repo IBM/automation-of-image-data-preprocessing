@@ -225,7 +225,7 @@ def extract(part, num):
     :return:
     """
     reader = bz2.BZ2File("/dccstor/sentana/sentana/model1/" + part + ".bz2", "rb")
-    writer = bz2.BZ2File("/dccstor/sentana/sentana/model1/" + part + "_small.bz2", "wb")
+    writer = bz2.BZ2File("/dccstor/sentana/sentana/model1/data40k" + part + "_small.bz2", "wb")
 
     for _ in range(num):
         line = pickle.load(reader)

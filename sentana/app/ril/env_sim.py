@@ -22,6 +22,7 @@ class EnvSim(object):
 
         # For internal use
         self._age = 0
+        self._path = []
         #self._origin = state
 
     @property
@@ -40,6 +41,14 @@ class EnvSim(object):
         """
         return self._age
 
+    @property
+    def get_path(self):
+        """
+        Get the list of actions of the current environment.
+        :return:
+        """
+        return self._path
+
     def reset(self, state, label):
         """
         Reset the environment with new state and label.
@@ -50,6 +59,7 @@ class EnvSim(object):
         self._state = state
         self._label = label
         self._age = 0
+        self._path = []
 
     def step(self, action, qout):
         """
@@ -60,10 +70,12 @@ class EnvSim(object):
         """
         # Recover image when it is overaged
         self._age += 1
+        #ex = [self._state, action]
         if self._age > cf.max_age:
             #self._age = 0
             #self._state = self._origin
             action = 0 if qout > 0 else 1
+            #self._age -= 1
 
         if action == 0 or action == 1:
             state = self._state
@@ -106,7 +118,11 @@ class EnvSim(object):
             reward = 0
             done = False
 
-        return state, reward, done, action
+        ex = [self._state, action, state, reward, done]
+        self._path.append(ex)
+        if reward != 0 and ex[1] < 2:
+            for idx in range(self._age):
+                self._path[idx][3] = float(idx+1)*reward / sum(range(self._age+1))
 
     def _flip(self, flip_code):
         """

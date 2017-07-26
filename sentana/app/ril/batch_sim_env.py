@@ -28,20 +28,16 @@ class BatchSimEnv(object):
         :param qouts:
         :return:
         """
-        states, rewards, dones, trues, ages, actions = [], [], [], [], [], []
         for (idx, env) in enumerate(self._envs):
-            state, reward, done, action = env.step(action_batch[idx],
-                                                   qouts[idx])
-            states.append(state)
-            rewards.append(reward)
-            dones.append(done)
-            trues.append(env.get_label)
-            ages.append(env.get_age)
-            actions.append(action)
+            env.step(action_batch[idx], qouts[idx])
 
+    def update_done(self, dones):
+        """
+        Update done images.
+        :param dones:
+        :return:
+        """
         self._envs = list(compress(self._envs, np.logical_not(dones)))
-
-        return states, rewards, dones, trues, ages, actions
 
     def add(self, image_batch, label_batch):
         """
@@ -51,3 +47,33 @@ class BatchSimEnv(object):
         :return:
         """
         self._envs += [EnvSim(i, l) for (i, l) in zip(image_batch, label_batch)]
+
+    def get_paths(self):
+        """
+        Return a list of paths.
+        :return:
+        """
+        paths = [env.get_path for env in self._envs]
+
+        return paths
+
+    def get_path(self, idx):
+        """
+        Return the path of a specific environment.
+        :param idx:
+        :return:
+        """
+        path = self._envs[idx].get_path
+
+        return path
+
+    def get_labels(self):
+        """
+        Return the list of true labels.
+        :return:
+        """
+        trues = [env.get_label for env in self._envs]
+
+        return trues
+
+

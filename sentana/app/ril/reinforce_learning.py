@@ -18,6 +18,8 @@ from sentana.config.cf_container import Config as cf
 from sentana.utils.misc import clear_model_dir
 from sentana.app.ril.batch_sim_env import BatchSimEnv
 from sentana.app.ril.exp_buffer import ExpBuffer
+from sentana.utils.misc import to_pickle
+from sentana.utils.misc import from_pickle
 
 
 class ReInLearning(object):
@@ -46,6 +48,39 @@ class ReInLearning(object):
 
         return image_batch, label_batch
 
+    @staticmethod
+    def _add_extra_example(env):
+        """
+        Strategy to add extra examples to the training set.
+        :param env:
+        :return:
+        """
+        extra = []
+        paths = env.get_paths()
+        for path in paths:
+            if path[-1][1] < 2:
+                extra.extend(path)
+
+        return extra
+
+    @staticmethod
+    def _compute_done(env):
+        """
+        Search for done images.
+        :param env:
+        :return:
+        """
+        rewards, dones, states, actions = [], [], [], []
+        trues = env.get_labels()
+        paths = env.get_paths()
+        for path in paths:
+            rewards.append(sum([ex[3] for ex in path]))
+            dones.append(path[-1][4])
+            states.append(path[-1][2])
+            actions.append(path[-1][1])
+
+        return rewards, dones, states, actions, trues
+
     def train_policy(self, cont=False):
         """
         Main method for training the policy.
@@ -59,6 +94,7 @@ class ReInLearning(object):
             self._sess.run(tf.group(tf.global_variables_initializer(),
                                     tf.local_variables_initializer()))
 
+            exp_buf = None
             if cont:
                 # Load the model
                 saver = tf.train.Saver(tf.global_variables())
@@ -69,8 +105,14 @@ class ReInLearning(object):
                 else:
                     warnings.warn("Model not exist, train a new model now")
 
+                # Load exp
+                if os.path.isfile(os.path.dirname(cf.save_model) + "/exp.pkl"):
+                    exp_buf = from_pickle(os.path.dirname(
+                        cf.save_model) + "/exp.pkl")
+
             # Initialize an exp buffer for current epoch
-            exp_buf = ExpBuffer()
+            if exp_buf is None:
+                exp_buf = ExpBuffer(5000)
             step_drop = (cf.exploration - cf.min_explore) / cf.anneal_step
 
             # Start training the policy network
@@ -111,19 +153,9 @@ class ReInLearning(object):
                             qouts = list(np.array(qouts)+qout[:, 0]-qout[:, 1])
 
                         # Add extra examples to the buffer after doing actions
-                        states, rewards, dones, _, ages, new_acts = env.step(
-                            actions, qouts)
+                        env.step(actions, qouts)
 
-                        extra = []
-                        for (i, a, s, r, d, g) in zip(image_batch, new_acts,
-                                                      states, rewards,
-                                                      dones, ages):
-                            if a < 2:
-                                extra.extend([(i, 1-a, s, -r, d, g),
-                                              (i, a, s, r, d, g)])
-                            else:
-                                extra.extend([(i, a, s, r, d, g)])
-
+                        extra = self._add_extra_example(env)
                         exp_buf.add(extra)
 
                         # Decrease the exploration
@@ -131,19 +163,19 @@ class ReInLearning(object):
                             cf.exploration -= step_drop
 
                         # Train and update the policy network
-                        if num_step % cf.update_freq == 0:
+                        if num_step % cf.update_freq == 0 and exp_buf.get_size() > cf.train_size:
                             train_batch = exp_buf.sample(cf.train_size)
                             i_states = np.array([e[0] for e in train_batch])
                             i_actions = np.array([e[1] for e in train_batch])
                             o_states = np.array([e[2] for e in train_batch])
                             i_rewards = np.array([e[3] for e in train_batch])
                             end_mul = np.array([1-e[4] for e in train_batch])
-                            i_ages = np.array([e[5] for e in train_batch])
 
                             qmax = self._sess.run(rg.get_qmax,
                                 feed_dict={rg.get_instances: o_states})
                             target = i_rewards + cf.gamma*qmax*end_mul
-                            target[np.where(target < 0)] = 0
+                            target[np.where(target < -1)] = -1
+                            target[np.where(target > 1)] = 1
                             #    cf.gamma-0.02*i_ages)*qmax*end_mul
 
                             #for (i, q) in enumerate(qmax):
@@ -156,6 +188,7 @@ class ReInLearning(object):
                                            rg.get_targets: target})
 
                         # Update input data after 1 step
+                        rewards, dones, states, _, _ = self._compute_done(env)
                         reward_all += sum(rewards)
                         done_all += sum(dones)
                         num_step += 1
@@ -163,6 +196,7 @@ class ReInLearning(object):
                         image_batch = list(compress(states,
                                                     np.logical_not(dones)))
                         qouts = list(compress(qouts, np.logical_not(dones)))
+                        env.update_done(dones)
 
                         # Print rewards after every number of steps
                         if num_step % 10 == 0:
@@ -181,6 +215,10 @@ class ReInLearning(object):
                     clear_model_dir(os.path.dirname(cf.save_model))
                     saver = tf.train.Saver(tf.global_variables())
                     saver.save(self._sess, cf.save_model)
+
+                    # Save exp
+                    to_pickle(os.path.dirname(cf.save_model) + "/exp.pkl",
+                              exp_buf)
 
                 else:
                     early_stop += 1
@@ -250,13 +288,13 @@ class ReInLearning(object):
                 qouts = list(np.array(qouts) + qout[:, 0] - qout[:, 1])
 
                 # Do actions
-                states, rewards, dones, trues, ages, new_acts = env.step(
-                    actions, qouts)
+                env.step(actions, qouts)
 
                 # Collect predictions
                 #complete = [not(a and b) for (a, b) in zip(
                 #    np.logical_not(dones), ages)]
                 #age_done = [not(a or b) for (a, b) in zip(dones, ages)]
+                rewards, dones, states, new_acts, trues = self._compute_done(env)
                 reward_all += sum(rewards)
                 batch_size = sum(dones)
                 image_batch = list(compress(
@@ -268,6 +306,7 @@ class ReInLearning(object):
                 #label_predict.extend(age_pred)
                 #label_actual.extend(list(compress(trues, age_done)))
                 qouts = list(compress(qouts, np.logical_not(dones)))
+                env.update_done(dones)
 
                 #print("Processed up to %d images" % len(label_predict))
 
