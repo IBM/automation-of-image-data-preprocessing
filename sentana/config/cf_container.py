@@ -23,6 +23,7 @@ class Config(object):
     max_grad_norm = float(config_parser.get("general_param", "max_grad_norm"))
     learning_rate = float(config_parser.get("general_param", "learning_rate"))
     save_model = config_parser.get("general_param", "save_model")
+    analysis_path = config_parser.get("general_param", "analysis_path")
 
     # Load van parameters
     valid_step = int(config_parser.get("van_param", "valid_step"))

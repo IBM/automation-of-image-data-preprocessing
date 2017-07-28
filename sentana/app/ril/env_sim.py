@@ -118,11 +118,15 @@ class EnvSim(object):
             reward = 0
             done = False
 
+        # Store example and recompute rewards
         ex = [self._state, action, state, reward, done]
         self._path.append(ex)
         if reward != 0 and ex[1] < 2:
             for idx in range(self._age):
                 self._path[idx][3] = float(idx+1)*reward / sum(range(self._age+1))
+
+        # Update the state to the new state
+        self._state = state
 
     def _flip(self, flip_code):
         """
@@ -130,9 +134,9 @@ class EnvSim(object):
         :param flip_code:
         :return:
         """
-        self._state = cv.flip(self._state, flip_code)
+        state = cv.flip(self._state, flip_code)
 
-        return self._state
+        return state
 
     def _crop(self, ratio):
         """
@@ -146,10 +150,10 @@ class EnvSim(object):
         d1 = int((self._state.shape[1] - crop_size1) / 2)
 
         crop_im = self._state[d0: d0 + crop_size0, d1: d1 + crop_size1, :]
-        self._state = np.zeros(self._state.shape)
-        self._state[d0: d0 + crop_size0, d1: d1 + crop_size1, :] = crop_im
+        state = np.zeros(self._state.shape)
+        state[d0: d0 + crop_size0, d1: d1 + crop_size1, :] = crop_im
 
-        return self._state
+        return state
 
     def _scale(self, ratio):
         """
@@ -164,15 +168,15 @@ class EnvSim(object):
         if ratio > 1:
             d0 = int((res_im.shape[0] - height) / 2)
             d1 = int((res_im.shape[1] - width) / 2)
-            self._state = res_im[d0: d0 + height, d1: d1 + width, :]
+            state = res_im[d0: d0 + height, d1: d1 + width, :]
 
         elif ratio < 1:
             d0 = int((height - res_im.shape[0]) / 2)
             d1 = int((width - res_im.shape[1]) / 2)
-            self._state = np.zeros(self._state.shape)
-            self._state[d0:d0+res_im.shape[0],d1:d1+res_im.shape[1],:] = res_im
+            state = np.zeros(self._state.shape)
+            state[d0:d0+res_im.shape[0],d1:d1+res_im.shape[1],:] = res_im
 
-        return self._state
+        return state
 
     def _rotate(self, degree):
         """
@@ -182,6 +186,16 @@ class EnvSim(object):
         """
         rows, cols = self._state.shape[:2]
         matrix = cv.getRotationMatrix2D((cols/2, rows/2), degree, 1)
-        self._state = cv.warpAffine(self._state, matrix,(cols, rows))
+        state = cv.warpAffine(self._state, matrix,(cols, rows))
 
-        return self._state
+        return state
+
+
+
+
+
+
+
+
+
+

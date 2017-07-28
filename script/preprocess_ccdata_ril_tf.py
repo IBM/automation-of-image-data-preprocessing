@@ -47,14 +47,28 @@ def process():
 
         jobs.append(p)
         p.start()
-        p.join()
         print(p.pid)
+
+    for (i, p) in enumerate(jobs):
+        print("Wait for process %d to join..." % i)
+        p.join()
 
     # Start merging
     print("Start merging...")
-    multiprocessing.Process(target=merge, args=(labels, "train")).start()
-    multiprocessing.Process(target=merge, args=(labels, "valid")).start()
-    multiprocessing.Process(target=merge, args=(labels, "test")).start()
+    p1 = multiprocessing.Process(target=merge, args=(labels, "train"))
+    p2 = multiprocessing.Process(target=merge, args=(labels, "valid"))
+    p3 = multiprocessing.Process(target=merge, args=(labels, "test"))
+
+    p1.start()
+    p2.start()
+    p3.start()
+
+    print("Waiting for merge processes to join...")
+    p1.join()
+    p2.join()
+    p3.join()
+
+    print("Finish.")
 
 
 def merge(labels, part):
@@ -68,20 +82,22 @@ def merge(labels, part):
     readers = [bz2.BZ2File(file, "rb") for file in files]
     writer = bz2.BZ2File(os.path.join(OUT_DIR, part, part + ".bz2"), "wb")
 
+    num_images = 0
     while len(readers) > 0:
         random.shuffle(readers)
         for (i, r) in enumerate(readers):
             try:
                 line = pickle.load(r)
                 pickle.dump(line, writer)
+                num_images += 1
             except EOFError:
                 r.close()
-                os.remove(r.name)
+                #os.remove(r.name)
                 del readers[i]
                 break
 
-            if np.random.rand() < 0.01: break
-
+            #if np.random.rand() < 0.01: break
+    print("Number of images is: %d" % num_images)
     writer.close()
 
 
@@ -198,9 +214,11 @@ def process_image(im_path):
     crop_im = resize_im[dim0: dim0+IM_SIZE, dim1: dim1+IM_SIZE, :]
 
     # Normalize image
-    dst = np.zeros(shape=crop_im.shape)
-    norm_im = cv.normalize(crop_im, dst, alpha=0, beta=1,
-                           norm_type=cv.NORM_MINMAX, dtype=cv.CV_32F)
+    #dst = np.zeros(shape=crop_im.shape)
+    #norm_im = cv.normalize(crop_im, dst, alpha=0, beta=1,
+    #                       norm_type=cv.NORM_MINMAX, dtype=cv.CV_32F)
+
+    norm_im = crop_im / 255.0
 
     # Store image
     #names = im_path.split(sep="/")
