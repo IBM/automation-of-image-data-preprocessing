@@ -32,7 +32,7 @@ class RILGraph(BaseGraph):
 #                self._declare_inputs(rr)
 #        else:
         self._instances = tf.placeholder(tf.float32,
-            shape=[None, cf.ima_height, cf.ima_width, 3])
+            shape=[None, cf.ima_height, cf.ima_width, 1])
         self._actions = tf.placeholder(tf.int32, shape=[None])
         self._targets = tf.placeholder(tf.float32, shape=[None])
 

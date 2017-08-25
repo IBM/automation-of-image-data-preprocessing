@@ -21,23 +21,44 @@ class BatchSimEnv(object):
         """
         self._envs = [EnvSim(i, l) for (i, l) in zip(image_batch, label_batch)]
 
-    def step(self, action_batch, qouts):
+    def step(self, action_batch):
         """
         Step one step for each environment.
         :param action_batch:
         :param qouts:
         :return:
         """
+        states, rewards, dones, trues = [], [], [], []
         for (idx, env) in enumerate(self._envs):
-            env.step(action_batch[idx], qouts[idx])
+            state, reward, done = env.step(action_batch[idx])
+            states.append(state)
+            rewards.append(reward)
+            dones.append(done)
+            trues.append(env.get_label)
 
-    def update_done(self, dones):
+        self._envs = list(compress(self._envs, np.logical_not(dones)))
+
+        return states, rewards, dones, trues
+
+    def step_valid(self, action_batch, qouts):
         """
-        Update done images.
-        :param dones:
+        Step one step for each environment.
+        :param action_batch:
+        :param qouts:
         :return:
         """
+        states, rewards, dones, trues, actions = [], [], [], [], []
+        for (idx, env) in enumerate(self._envs):
+            state, reward, done, action = env.step_valid(action_batch[idx], qouts[idx])
+            states.append(state)
+            rewards.append(reward)
+            dones.append(done)
+            trues.append(env.get_label)
+            actions.append(action)
+
         self._envs = list(compress(self._envs, np.logical_not(dones)))
+
+        return states, rewards, dones, trues, actions
 
     def add(self, image_batch, label_batch):
         """
@@ -47,6 +68,14 @@ class BatchSimEnv(object):
         :return:
         """
         self._envs += [EnvSim(i, l) for (i, l) in zip(image_batch, label_batch)]
+
+    def update_done(self, dones):
+        """
+        Update done images.
+        :param dones:
+        :return:
+        """
+        self._envs = list(compress(self._envs, np.logical_not(dones)))
 
     def get_paths(self):
         """
@@ -76,4 +105,12 @@ class BatchSimEnv(object):
 
         return trues
 
-
+    def step_analysis(self, action_batch, qouts):
+        """
+        Step one step for each environment.
+        :param action_batch:
+        :param qouts:
+        :return:
+        """
+        for (idx, env) in enumerate(self._envs):
+            env.step_analysis(action_batch[idx], qouts[idx])

@@ -23,7 +23,7 @@ class EnvSim(object):
         # For internal use
         self._age = 0
         self._path = []
-        #self._origin = state
+        self._origin_state = state
 
     @property
     def get_label(self):
@@ -41,14 +41,6 @@ class EnvSim(object):
         """
         return self._age
 
-    @property
-    def get_path(self):
-        """
-        Get the list of actions of the current environment.
-        :return:
-        """
-        return self._path
-
     def reset(self, state, label):
         """
         Reset the environment with new state and label.
@@ -61,7 +53,16 @@ class EnvSim(object):
         self._age = 0
         self._path = []
 
-    def step(self, action, qout):
+    def restart(self):
+        """
+        Restart the environment with original state and label.
+        :return:
+        """
+        self._state = self._origin_state
+        self._age = 0
+        self._path = []
+
+    def step(self, action):
         """
         Step one step in the environment.
         :param action:
@@ -70,63 +71,97 @@ class EnvSim(object):
         """
         # Recover image when it is overaged
         self._age += 1
-        #ex = [self._state, action]
         if self._age > cf.max_age:
-            #self._age = 0
-            #self._state = self._origin
-            action = 0 if qout > 0 else 1
-            #self._age -= 1
+            self.restart()
+            reward = None
+            done = False
+            return self._state, reward, done
 
-        if action == 0 or action == 1:
+        if action <= 9:
             state = self._state
             if self._label == action: reward = 1
             else: reward = -1
             done = True
 
-        elif action == 2:
+        elif action == 10:
             state = self._flip(-1)
             reward = 0
             done = False
 
-        elif action == 3:
+        elif action == 11:
             state = self._flip(0)
             reward = 0
             done = False
 
-        elif action == 4:
+        elif action == 12:
             state = self._flip(1)
             reward = 0
             done = False
 
-        elif action == 5:
-            state = self._crop(0.9)
+        elif action == 13:
+            state = self._rotate(90)
             reward = 0
             done = False
 
-        elif action == 6:
-            state = self._scale(1.1)
+        elif action == 14:
+            state = self._rotate(-90)
             reward = 0
             done = False
-
-        elif action == 7:
-            state = self._rotate(-15)
-            reward = 0
-            done = False
-
-        elif action == 8:
-            state = self._rotate(15)
-            reward = 0
-            done = False
-
-        # Store example and recompute rewards
-        ex = [self._state, action, state, reward, done]
-        self._path.append(ex)
-        if reward != 0 and ex[1] < 2:
-            for idx in range(self._age):
-                self._path[idx][3] = float(idx+1)*reward / sum(range(self._age+1))
 
         # Update the state to the new state
         self._state = state
+
+        return state, reward, done
+
+    def step_valid(self, action, qout):
+        """
+        Step one step in the environment.
+        :param action:
+        :param qout:
+        :return:
+        """
+        # Recover image when it is overaged
+        self._age += 1
+        if self._age > cf.max_age:
+            action = np.argmax(qout)
+
+        if action <= 9:
+            state = self._state
+            if self._label == action:
+                reward = 1
+            else:
+                reward = -1
+            done = True
+
+        elif action == 10:
+            state = self._flip(-1)
+            reward = 0
+            done = False
+
+        elif action == 11:
+            state = self._flip(0)
+            reward = 0
+            done = False
+
+        elif action == 12:
+            state = self._flip(1)
+            reward = 0
+            done = False
+
+        elif action == 13:
+            state = self._rotate(90)
+            reward = 0
+            done = False
+
+        elif action == 14:
+            state = self._rotate(-90)
+            reward = 0
+            done = False
+
+        # Update the state to the new state
+        self._state = state
+
+        return state, reward, done, action
 
     def _flip(self, flip_code):
         """
@@ -136,7 +171,7 @@ class EnvSim(object):
         """
         state = cv.flip(self._state, flip_code)
 
-        return state
+        return np.reshape(state, [28, 28, 1])
 
     def _crop(self, ratio):
         """
@@ -188,14 +223,64 @@ class EnvSim(object):
         matrix = cv.getRotationMatrix2D((cols/2, rows/2), degree, 1)
         state = cv.warpAffine(self._state, matrix,(cols, rows))
 
-        return state
+        return np.reshape(state, [28, 28, 1])
 
+    def step_analysis(self, action, qout):
+        """
+        Step one step in the environment.
+        :param action:
+        :param qout:
+        :return:
+        """
+        # Recover image when it is overaged
+        self._age += 1
+        if self._age > cf.max_age:
+            action = np.argmax(qout)
 
+        if action <= 9:
+            state = self._state
+            if self._label == action:
+                reward = 1
+            else:
+                reward = -1
+            done = True
 
+        elif action == 10:
+            state = self._flip(-1)
+            reward = 0
+            done = False
 
+        elif action == 11:
+            state = self._flip(0)
+            reward = 0
+            done = False
 
+        elif action == 12:
+            state = self._flip(1)
+            reward = 0
+            done = False
 
+        elif action == 13:
+            state = self._rotate(90)
+            reward = 0
+            done = False
 
+        elif action == 14:
+            state = self._rotate(-90)
+            reward = 0
+            done = False
 
+        # Store example
+        ex = [self._state, action, state, reward, done]
+        self._path.append(ex)
 
+        # Update the state to the new state
+        self._state = state
 
+    @property
+    def get_path(self):
+        """
+        Get the list of actions of the current environment.
+        :return:
+        """
+        return self._path

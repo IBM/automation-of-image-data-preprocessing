@@ -31,7 +31,7 @@ class PCNN(BaseArch):
         :return:
         """
         kern_init = tf.contrib.layers.xavier_initializer()
-        bias_init = tf.uniform_unit_scaling_initializer(factor=0)
+        bias_init = tf.truncated_normal_initializer(stddev=0.01)
         xavi_init = tf.contrib.layers.xavier_initializer()
 
         with tf.variable_scope("conv1") as scope:

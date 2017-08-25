@@ -224,12 +224,27 @@ def extract(part, num):
     :param part:
     :return:
     """
-    reader = bz2.BZ2File("/dccstor/sentana/sentana/model1/" + part + ".bz2", "rb")
-    writer = bz2.BZ2File("/dccstor/sentana/sentana/model1/data40k" + part + "_small.bz2", "wb")
+    reader = bz2.BZ2File("/dccstor/sentana/sentana/model/cc_data/" + part + ".bz2", "rb")
+    writer = bz2.BZ2File("/dccstor/sentana/sentana/model/cc_data/" + part + "_10k.bz2", "wb")
 
-    for _ in range(num):
+    nump = 0
+    numn = 0
+    neg = True
+    while True:
         line = pickle.load(reader)
-        pickle.dump(line, writer)
+        if line["label"] == 0 and neg == True and numn < num:
+            pickle.dump(line, writer)
+            numn += 1
+            neg = False
+
+        elif line["label"] == 1 and neg == False and nump < num:
+            pickle.dump(line, writer)
+            nump += 1
+            neg = True
+
+        if nump % 500 == 0 or numn % 500 == 0: print(nump, numn)
+
+        if numn == num and nump == num: break
 
     reader.close()
     writer.close()

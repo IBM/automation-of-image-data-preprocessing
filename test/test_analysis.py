@@ -15,9 +15,7 @@ def letsgo():
     ril = ReInLearning()
 
     # Start testing
-    re_err, test_err = ril.test_and_analysis()
-    print("Final valid reward and test error of ril version: %g and %g"
-          % (-re_err, test_err))
+    ril.test_and_analysis()
 
 
 if __name__ == "__main__":

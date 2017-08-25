@@ -18,10 +18,8 @@ def letsgo():
     ril.train_policy(cont=False)
 
     # Start testing
-    re_err, test_err, p, t = ril.test_policy()
-    print("Final valid reward and test error of ril version: %g and %g"
-          % (-re_err, test_err))
-
+    test_err, p, t = ril.test_policy()
+    print("Final test error of ril version: %g" % test_err)
     print(p, t)
 
 
