@@ -1,2 +1,5 @@
 # sentana
-This is a project focusing on sentiment analysis.
+This project focuses on the automation of data preprocessing (AutoDP). 
+
+
+
