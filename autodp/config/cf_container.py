@@ -12,6 +12,7 @@ class Config(object):
     # Load general parameters
     ima_height = int(config_parser.get("general_param", "ima_height"))
     ima_width = int(config_parser.get("general_param", "ima_width"))
+    ima_depth = int(config_parser.get("general_param", "ima_depth"))
     num_class = int(config_parser.get("general_param", "num_class"))
     net_arch = config_parser.get("general_param", "net_arch")
     loss_func = config_parser.get("general_param", "loss_func")
@@ -37,6 +38,12 @@ class Config(object):
     update_freq = int(config_parser.get("ril_param", "update_freq"))
     train_size = int(config_parser.get("ril_param", "train_size"))
     max_age = int(config_parser.get("ril_param", "max_age"))
+
+
+
+
+
+
 
 
 

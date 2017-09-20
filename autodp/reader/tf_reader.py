@@ -11,9 +11,9 @@ from autodp.config.cf_container import Config as cf
 
 
 @BaseReader.register
-class DataReader(BaseReader):
+class TFReader(BaseReader):
     """
-    This class contains implementations of a data reader that will read
+    This class contains implementation of a data reader that will read
     data as batches of tensorflow records with shuffling.
     """
     def __init__(self, path, num_epoch):
@@ -30,47 +30,72 @@ class DataReader(BaseReader):
         :param file_queue:
         :return:
         """
+        # Declare a tensorflow reader and read data serially
         reader = tf.TFRecordReader()
         _, serialized_example = reader.read(file_queue)
         features = tf.parse_single_example(serialized_example, features={
-            "img": tf.VarLenFeature(tf.string),
-            "label": tf.FixedLenFeature([], tf.int64)})
+            "i": tf.VarLenFeature(tf.string),
+            "l": tf.FixedLenFeature([], tf.int32)})
 
         # Convert from a scalar string tensor to a float tensor and reshape
-        image = tf.reshape(tf.decode_raw(features["img"].values, tf.float64),
-                           [cf.ima_height, cf.ima_width, 3])
-        label = features["label"]
+        image = tf.reshape(tf.decode_raw(features["i"].values, tf.float32),
+                           [cf.ima_height, cf.ima_width, cf.ima_depth])
+        label = features["l"]
 
         return image, label
 
-    def _read_input(self):
+    def _read_input(self, batch_size):
         """
         Reads input data num_epoch times.
+        :param batch_size:
         :return:
         """
+        # Get full file name of all input files
         file_names = os.listdir(self._path)
         file_names = [f for f in file_names if not f.startswith(".")]
         file_names = [os.path.join(self._path, f) for f in file_names]
 
-        file_queue = tf.train.string_input_producer(file_names,
+        # Define a tensorflow queue
+        file_queue = tf.train.string_input_producer(string_tensor=file_names,
                                                     num_epochs=self._num_epoch)
 
-        # Even when reading in multiple threads, share the file queue
+        # Read and decode data from queue
         image, label = self._read_and_decode(file_queue)
 
         # Collect examples into batch
-        images, labels = tf.train.shuffle_batch([image, label],
-            num_threads=10, batch_size=cf.batch_size, min_after_dequeue=100,
-            capacity=100 + 3 * cf.batch_size, allow_smaller_final_batch=True)
+        images, labels = tf.train.shuffle_batch(tensors=[image, label],
+            num_threads=3, batch_size=batch_size, min_after_dequeue=100,
+            capacity=100+3*cf.batch_size, allow_smaller_final_batch=True)
 
         return images, labels
 
-    def get_batch(self):
+    def get_batch(self, batch_size=cf.batch_size, sess=None):
         """
         This function implements the abstract method of the super class and
         is used to read data as batch per time.
+        :param batch_size:
+        :param sess:
         :return:
         """
-        images, labels = self._read_input()
+        # Get tensorflow records
+        images, labels = self._read_input(batch_size)
+
+        # Return tensorflow records if sess is not passed else normal records
+        if sess is not None:
+            images, labels = sess.run([images, labels])
 
         return (images, labels)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
