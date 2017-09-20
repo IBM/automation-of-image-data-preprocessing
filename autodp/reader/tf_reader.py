@@ -52,7 +52,6 @@ class TFReader(BaseReader):
         """
         # Get full file name of all input files
         file_names = os.listdir(self._path)
-        file_names = [f for f in file_names if not f.startswith(".")]
         file_names = [os.path.join(self._path, f) for f in file_names]
 
         # Define a tensorflow queue
