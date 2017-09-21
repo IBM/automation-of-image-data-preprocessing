@@ -4,7 +4,7 @@ Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
 import tensorflow as tf
 
-from sentana.network.loss.loss import Loss
+from autodp.network.loss.loss import Loss
 
 
 @Loss.register
@@ -20,13 +20,27 @@ class MeanSquareError(Loss):
         """
         super().__init__(preds, trues)
 
-    def _compute_loss(self, weights=1):
+    def _compute_loss(self, weights):
         """
         Compute the loss function.
-        :param type:
+        :param weights:
         :return:
         """
         tf.contrib.losses.mean_squared_error(predictions=self._preds,
                                              labels=self._trues,
                                              weights=weights)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

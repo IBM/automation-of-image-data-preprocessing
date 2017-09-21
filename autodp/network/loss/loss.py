@@ -9,7 +9,7 @@ import tensorflow as tf
 
 class Loss(metaclass=abc.ABCMeta):
     """
-    A class to compute the loss function.
+    An abstract class to compute the loss function.
     """
     def __init__(self, preds, trues):
         """
@@ -21,10 +21,10 @@ class Loss(metaclass=abc.ABCMeta):
         self._trues = trues
 
     @abc.abstractmethod
-    def _compute_loss(self, weights=1):
+    def _compute_loss(self, weights):
         """
         Compute the loss function.
-        :param type:
+        :param weights:
         :return:
         """
         # loss_funcs = ["sparse_softmax_cross_entropy", "log_loss", "hinge_loss",
@@ -45,7 +45,7 @@ class Loss(metaclass=abc.ABCMeta):
     def compute_loss(self, weights=1):
         """
         Compute the final loss function.
-        :param type:
+        :param weights:
         :return:
         """
         self._compute_loss(weights=weights)
@@ -53,3 +53,18 @@ class Loss(metaclass=abc.ABCMeta):
                               name="total_loss")
 
         return total_loss
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

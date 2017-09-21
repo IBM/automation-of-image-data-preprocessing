@@ -4,8 +4,8 @@ Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
 import tensorflow as tf
 
-from sentana.network.loss.loss import Loss
-from sentana.config.cf_container import Config as cf
+from autodp.network.loss.loss import Loss
+from autodp.config.cf_container import Config as cf
 
 
 @Loss.register
@@ -21,16 +21,33 @@ class SoftmaxCrossEntropy(Loss):
         """
         super().__init__(preds, trues)
 
-    def _compute_loss(self, weights=1):
+    def _compute_loss(self, weights):
         """
         Compute the loss function.
-        :param type:
+        :param weights:
         :return:
         """
-        onehot_labels = tf.one_hot(self._trues, depth=cf.num_class, axis=1)
+        onehot_labels = tf.one_hot(self._trues, depth=cf.num_class, axis=-1)
         tf.contrib.losses.softmax_cross_entropy(logits=self._preds,
                                                 onehot_labels=onehot_labels,
                                                 weights=weights)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
