@@ -113,7 +113,21 @@ class BaseGraph(metaclass=abc.ABCMeta):
         """
         return self._instance
 
+    @property
+    def get_label(self):
+        """
+        Get true output.
+        :return:
+        """
+        return self._target
 
+    @property
+    def get_pred(self):
+        """
+        Get prediction output.
+        :return:
+        """
+        return self._pred
 
 
 

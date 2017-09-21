@@ -31,15 +31,15 @@ class NNGraph(BaseGraph):
         if tfreader is not None:
             (images, labels) = tfreader.get_batch(batch_size=cf.batch_size)
             self._instance = images
-            self._targets = labels
+            self._target = labels
         else:
             self._instance = tf.placeholder(dtype=tf.float32,
                 shape=[None, cf.ima_height, cf.ima_width, cf.ima_depth])
-            self._targets = tf.placeholder(tf.int32, shape=[None])
+            self._target = tf.placeholder(tf.int32, shape=[None])
 
         # Define network architecture, objective function and train operator
-        self._preds = self._inference(self._instances)
-        self._train_loss(self._preds, self._targets)
+        self._pred = self._inference(self._instance)
+        self._train_loss(self._pred, self._target)
 
 
 
