@@ -91,3 +91,19 @@ class RILGraph(BaseGraph):
         :return:
         """
         return self._fc2
+
+    @property
+    def get_preds(self):
+        """
+        Get prediction output.
+        :return:
+        """
+        return self._preds
+
+    @property
+    def get_targets(self):
+        """
+        Get true output.
+        :return:
+        """
+        return self._targets

@@ -11,9 +11,9 @@ import warnings
 import pickle
 import bz2
 
-from sentana.utils.misc import clear_model_dir
-from sentana.graph.seq_graph import SeqGraph
-from sentana.config.cf_container import Config as cf
+from autodp.utils.misc import clear_model_dir
+from autodp.graph.seq_graph import SeqGraph
+from autodp.config.cf_container import Config as cf
 
 
 class ModelRunner(object):
