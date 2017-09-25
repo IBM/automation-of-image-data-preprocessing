@@ -110,6 +110,35 @@ def relu(x, alpha=0, max_value=None):
     return x
 
 
+def copy_network(sess, tf_vars, coef=1):
+    """
+    Copy weight parameters from one network to another resembled network.
+    :param sess:
+    :param tf_vars:
+    :param coef:
+    :return:
+    """
+    num_vars = len(tf_vars)
+    for (idx, var) in enumerate(tf_vars[0:num_vars//2]):
+        assign_op = tf_vars[idx + num_vars//2].assign((var.value()*coef) + (
+            (1-coef)*tf_vars[idx + num_vars//2].value()))
+        sess.run(assign_op)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

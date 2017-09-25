@@ -79,5 +79,47 @@ def pause():
     Pause the program until enter key pressed.
     :return:
     """
-    programPause = input("Press the <ENTER> key to continue...")
+    input("Press the <ENTER> key to continue...")
+
+
+def get_class(class_name):
+    """
+    Get a class module from its name.
+    :param class_name:
+    :return: class module
+    """
+    sub_mods = class_name.split(sep=".")
+    module = __import__(".".join(sub_mods[:-1]), fromlist=sub_mods[-1])
+    class_module = getattr(module, sub_mods[-1])
+
+    return class_module
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
