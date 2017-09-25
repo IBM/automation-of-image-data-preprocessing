@@ -19,6 +19,7 @@ class Config(object):
     train_path = config_parser.get("general_param", "train_path")
     valid_path = config_parser.get("general_param", "valid_path")
     test_path = config_parser.get("general_param", "test_path")
+    result_path = config_parser.get("general_param", "result_path")
     num_epoch = int(config_parser.get("general_param", "num_epoch"))
     batch_size = int(config_parser.get("general_param", "batch_size"))
     max_grad_norm = float(config_parser.get("general_param", "max_grad_norm"))
@@ -26,10 +27,13 @@ class Config(object):
     save_model = config_parser.get("general_param", "save_model")
     analysis_path = config_parser.get("general_param", "analysis_path")
 
-    # Load van parameters
-    valid_step = int(config_parser.get("van_param", "valid_step"))
+    # Load neural network parameters
+    valid_step = int(config_parser.get("nn_param", "valid_step"))
+    nn_arch = config_parser.get("nn_param", "nn_arch")
+    nn_loss = config_parser.get("nn_param", "nn_loss")
+    nn_reader = config_parser.get("nn_param", "nn_reader")
 
-    # Load ril parameters
+    # Load reinforcement learning parameters
     num_action = int(config_parser.get("ril_param", "num_action"))
     exploration = float(config_parser.get("ril_param", "exploration"))
     min_explore = float(config_parser.get("ril_param", "min_explore"))

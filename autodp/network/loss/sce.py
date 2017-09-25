@@ -5,12 +5,13 @@ Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 import tensorflow as tf
 
 from autodp.network.loss.loss import Loss
+from autodp.config.cf_container import Config as cf
 
 
 @Loss.register
-class MeanSquareError(Loss):
+class SCE(Loss):
     """
-    This class implements the mean_square_error loss function.
+    This class implements the softmax cross entropy loss function.
     """
     def __init__(self, preds, trues):
         """
@@ -26,9 +27,16 @@ class MeanSquareError(Loss):
         :param weights:
         :return:
         """
-        tf.contrib.losses.mean_squared_error(predictions=self._preds,
-                                             labels=self._trues,
-                                             weights=weights)
+        onehot_labels = tf.one_hot(self._trues, depth=cf.num_class, axis=-1)
+        tf.contrib.losses.softmax_cross_entropy(logits=self._preds,
+                                                onehot_labels=onehot_labels,
+                                                weights=weights)
+
+
+
+
+
+
 
 
 

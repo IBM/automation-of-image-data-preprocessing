@@ -7,21 +7,23 @@ import abc
 import tensorflow as tf
 
 from autodp.config.cf_container import Config as cf
+from autodp.utils.misc import get_class
 
 
 class BaseGraph(metaclass=abc.ABCMeta):
     """
     This is a base class that helps build the tensorflow graph.
     """
-    def __init__(self, net_arch, loss_func):
+    def __init__(self, net_arch, loss_func, tfreader):
         """
         Initialization of building a graph.
         :param data_path:
         :param num_epoch:
+        :param tfreader:
         """
         self._net_arch = net_arch
         self._loss_func = loss_func
-        self._build_model()
+        self._build_model(tfreader)
 
     def _inference(self, instance):
         """
@@ -29,10 +31,8 @@ class BaseGraph(metaclass=abc.ABCMeta):
         :param instance:
         :return:
         """
-        sub_mods = self._net_arch.split(sep=".")
-        module = __import__(".".join(sub_mods[:-1]), fromlist=sub_mods[-1])
-        net_arch_name = getattr(module, sub_mods[-1])
-        net_arch = net_arch_name(instance)
+        net_arch_class = get_class(self._net_arch)
+        net_arch = net_arch_class(instance)
         preds = net_arch.build_arch()
 
         return preds
@@ -44,10 +44,7 @@ class BaseGraph(metaclass=abc.ABCMeta):
         :param trues: target values
         :return: the loss tensor
         """
-        module = __import__("".join(["autodp.network.loss.", self._loss_func]),
-                            fromlist=self._loss_func.title().replace("_", ""))
-        loss_class = getattr(module, self._loss_func.title().replace("_", ""))
-
+        loss_class = get_class(self._loss_func)
         loss = loss_class(preds=preds, trues=trues)
         total_loss = loss.compute_loss()
 

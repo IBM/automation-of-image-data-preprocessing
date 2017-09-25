@@ -17,7 +17,7 @@ class SQReader(BaseReader):
     This class contains implementation of a data reader that will read a text
     file of data sequentially without shuffling.
     """
-    def __init__(self, path, num_epoch):
+    def __init__(self, path, num_epoch=1):
         """
         Initialization.
         :param path:

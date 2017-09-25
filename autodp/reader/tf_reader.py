@@ -16,7 +16,7 @@ class TFReader(BaseReader):
     This class contains implementation of a data reader that will read
     data as batches of tensorflow records with shuffling.
     """
-    def __init__(self, path, num_epoch):
+    def __init__(self, path, num_epoch=1):
         """
         Initialization.
         :param path:
