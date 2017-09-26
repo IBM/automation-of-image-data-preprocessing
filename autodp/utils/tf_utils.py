@@ -3,6 +3,7 @@ The IBM License 2017.
 Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
 import tensorflow as tf
+from tensorflow.python.platform import gfile
 
 
 def declare_variable(name, shape, initializer, dev="cpu"):
@@ -125,6 +126,15 @@ def copy_network(sess, tf_vars, coef=1):
         sess.run(assign_op)
 
 
+def create_graph(model):
+    """"Creates a graph from saved GraphDef file and returns a saver."""
+    # Creates graph from saved graph_def.pb.
+    with tf.Session() as sess:
+        with gfile.FastGFile(model, 'rb') as f:
+            graph_def = tf.GraphDef()
+            graph_def.ParseFromString(f.read())
+            _ = tf.import_graph_def(graph_def, name='')
+    return sess.graph
 
 
 

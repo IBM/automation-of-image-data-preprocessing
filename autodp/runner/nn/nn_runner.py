@@ -337,18 +337,20 @@ class NNRunner(object):
             train_reader = reader_class(cf.train_path, cf.num_epoch)
 
             # Initialize a data reader for validation
-            valid_reader = reader_class(cf.valid_path, 1)
+            valid_reader = reader_class(cf.valid_path)
 
             # Build graph and do initialization
             if cf.nn_reader.split(".")[-1] == "TFReader":
                 train_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                                    tfreader=train_reader)
+                                    name="train_nng", tfreader=train_reader)
                 valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                                    tfreader=valid_reader)
+                                    name="valid_nng", tfreader=valid_reader)
 
             else:
-                train_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss)
-                valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss)
+                train_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
+                                    name="train_nng")
+                valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
+                                    name="valid_nng")
 
             sess.run(tf.group(tf.global_variables_initializer(),
                               tf.local_variables_initializer()))
@@ -394,13 +396,15 @@ class NNRunner(object):
             # Build graph and do initialization
             if cf.nn_reader.split(".")[-1] == "TFReader":
                 nng1 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                               tfreader=reader)
+                               name="nng1", tfreader=reader)
                 nng2 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                               tfreader=reader)
+                               name="nng2", tfreader=reader)
 
             else:
-                nng1 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss)
-                nng2 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss)
+                nng1 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
+                               name="nng1")
+                nng2 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
+                               name="nng2")
 
             sess.run(tf.group(tf.global_variables_initializer(),
                               tf.local_variables_initializer()))

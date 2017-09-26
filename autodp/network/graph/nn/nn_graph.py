@@ -13,14 +13,15 @@ class NNGraph(BaseGraph):
     """
     This class implements a vanila tensorflow graph for a plain neural network.
     """
-    def __init__(self, net_arch, loss_func, tfreader=None):
+    def __init__(self, net_arch, loss_func, name, tfreader=None):
         """
         Initialization of building a graph.
         :param net_arch:
         :param loss_func:
+        :param name:
         :param tfreader:
         """
-        super().__init__(net_arch, loss_func, tfreader)
+        super().__init__(net_arch, loss_func, name, tfreader)
 
     def _build_model(self, tfreader):
         """
