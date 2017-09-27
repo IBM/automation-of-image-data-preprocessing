@@ -10,6 +10,7 @@ import numpy as np
 import warnings
 import pandas as pd
 
+from autodp.runner.base_runner import BaseRunner
 from autodp.utils.misc import clear_model_dir
 from autodp.network.graph.nn.nn_graph import NNGraph
 from autodp.config.cf_container import Config as cf
@@ -17,7 +18,8 @@ from autodp.utils.misc import get_class
 from autodp.utils.tf_utils import copy_network
 
 
-class NNRunner(object):
+@BaseRunner.register
+class NNRunner(BaseRunner):
     """
     Main class to train/test a CNN model.
     """

@@ -44,14 +44,20 @@ class Config(object):
     nn_reader = config_parser.get("nn_param", "nn_reader")
 
     # Load reinforcement learning parameters
-    num_action = int(config_parser.get("ril_param", "num_action"))
-    exploration = float(config_parser.get("ril_param", "exploration"))
-    min_explore = float(config_parser.get("ril_param", "min_explore"))
-    anneal_step = float(config_parser.get("ril_param", "anneal_step"))
-    gamma = float(config_parser.get("ril_param", "gamma"))
-    update_freq = int(config_parser.get("ril_param", "update_freq"))
-    train_size = int(config_parser.get("ril_param", "train_size"))
-    max_age = int(config_parser.get("ril_param", "max_age"))
+    rl_arch = config_parser.get("rl_param", "rl_arch")
+    rl_loss = config_parser.get("rl_param", "rl_loss")
+    rl_reader = config_parser.get("rl_param", "rl_reader")
+    rl_graph = config_parser.get("rl_param", "rl_graph")
+    rl_agent = config_parser.get("rl_param", "rl_agent")
+
+    num_action = int(config_parser.get("rl_param", "num_action"))
+    exploration = float(config_parser.get("rl_param", "exploration"))
+    min_explore = float(config_parser.get("rl_param", "min_explore"))
+    anneal_step = float(config_parser.get("rl_param", "anneal_step"))
+    gamma = float(config_parser.get("rl_param", "gamma"))
+    update_freq = int(config_parser.get("rl_param", "update_freq"))
+    train_size = int(config_parser.get("rl_param", "train_size"))
+    max_age = int(config_parser.get("rl_param", "max_age"))
 
 
 
