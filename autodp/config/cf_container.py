@@ -23,6 +23,8 @@ class Config(object):
     num_epoch = int(config_parser.get("general_param", "num_epoch"))
     batch_size = int(config_parser.get("general_param", "batch_size"))
     max_grad_norm = float(config_parser.get("general_param", "max_grad_norm"))
+    valid_step = int(config_parser.get("general_param", "valid_step"))
+    reader = config_parser.get("general_param", "reader")
 
     learning_rate = float(config_parser.get("general_param", "learning_rate"))
     reg_coef = float(config_parser.get("general_param", "reg_coef"))
@@ -38,26 +40,32 @@ class Config(object):
                                                  "fc_size"))
 
     # Load neural network parameters
-    valid_step = int(config_parser.get("nn_param", "valid_step"))
     nn_arch = config_parser.get("nn_param", "nn_arch")
     nn_loss = config_parser.get("nn_param", "nn_loss")
-    nn_reader = config_parser.get("nn_param", "nn_reader")
 
     # Load reinforcement learning parameters
     rl_arch = config_parser.get("rl_param", "rl_arch")
     rl_loss = config_parser.get("rl_param", "rl_loss")
-    rl_reader = config_parser.get("rl_param", "rl_reader")
     rl_graph = config_parser.get("rl_param", "rl_graph")
     rl_agent = config_parser.get("rl_param", "rl_agent")
 
     num_action = int(config_parser.get("rl_param", "num_action"))
-    exploration = float(config_parser.get("rl_param", "exploration"))
+    max_explore = float(config_parser.get("rl_param", "max_explore"))
     min_explore = float(config_parser.get("rl_param", "min_explore"))
     anneal_step = float(config_parser.get("rl_param", "anneal_step"))
+
     gamma = float(config_parser.get("rl_param", "gamma"))
-    update_freq = int(config_parser.get("rl_param", "update_freq"))
-    train_size = int(config_parser.get("rl_param", "train_size"))
     max_age = int(config_parser.get("rl_param", "max_age"))
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -24,7 +24,7 @@ class Q1Graph(BaseGraph):
         """
         super().__init__(net_arch, loss_func, name, tfreader)
 
-    def _build_model(self, tfreader=None):
+    def _build_model(self, tfreader):
         """
         Build the total graph.
         :param tfreader: not used

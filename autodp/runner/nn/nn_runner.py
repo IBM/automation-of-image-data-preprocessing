@@ -335,14 +335,14 @@ class NNRunner(BaseRunner):
         """
         with tf.Graph().as_default(), tf.Session() as sess:
             # Initialize a data reader for train
-            reader_class = get_class(cf.nn_reader)
+            reader_class = get_class(cf.reader)
             train_reader = reader_class(cf.train_path, cf.num_epoch)
 
             # Initialize a data reader for validation
             valid_reader = reader_class(cf.valid_path)
 
             # Build graph and do initialization
-            if cf.nn_reader.split(".")[-1] == "TFReader":
+            if cf.reader.split(".")[-1] == "TFReader":
                 train_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
                                     name="train_nng", tfreader=train_reader)
                 valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
@@ -370,7 +370,7 @@ class NNRunner(BaseRunner):
                     warnings.warn("Model not exist, train a new model now")
 
             # Start to train
-            if cf.nn_reader.split(".")[-1] == "TFReader":
+            if cf.reader.split(".")[-1] == "TFReader":
                 self._train_with_tfreader(sess, train_nng.get_train_step,
                                           train_nng.get_error,
                                           valid_nng.get_error)
@@ -392,11 +392,11 @@ class NNRunner(BaseRunner):
         """
         with tf.Graph().as_default(), tf.Session() as sess:
             # Initialize a data reader
-            reader_class = get_class(cf.nn_reader)
+            reader_class = get_class(cf.reader)
             reader = reader_class(cf.test_path)
 
             # Build graph and do initialization
-            if cf.nn_reader.split(".")[-1] == "TFReader":
+            if cf.reader.split(".")[-1] == "TFReader":
                 nng1 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
                                name="nng1", tfreader=reader)
                 nng2 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
@@ -420,7 +420,7 @@ class NNRunner(BaseRunner):
                 raise IOError("Model not exist")
 
             # Start to test
-            if cf.nn_reader.split(".")[-1] == "TFReader":
+            if cf.reader.split(".")[-1] == "TFReader":
                 accuracy = self._test_with_tfreader(sess, nng1.get_pred,
                                                     nng1.get_label)
 
