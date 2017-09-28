@@ -5,6 +5,7 @@ Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 import tensorflow as tf
 import warnings
 import numpy as np
+import pandas as pd
 
 from autodp.runner.base_runner import BaseRunner
 from autodp.utils.misc import get_class
@@ -99,8 +100,12 @@ class RLRunner(BaseRunner):
             bool_tmp = [bool(t) for t in tmp]
             accuracy = 1-sum(bool_tmp)/float(len(actual))
 
-        return accuracy, reward, predict, actual
+            # Support kaggle output
+            df = pd.DataFrame({"id": actual, "label": predict})
+            df.to_csv(cf.result_path + "/result.csv", header=True, sep=",",
+                      index=False)
 
+        return accuracy, reward, predict, actual
 
 
 

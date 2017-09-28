@@ -209,7 +209,8 @@ class NNRunner(BaseRunner):
 
         except tf.errors.OutOfRangeError:
             df = pd.DataFrame({"id": i_list, "label": p_list})
-            df.to_csv(cf.result_path, header=True, sep=",", index=False)
+            df.to_csv(cf.result_path + "/result.csv", header=True, sep=",",
+                      index=False)
 
             tmp = np.abs(np.array(i_list) - np.array(p_list))
             bool_tmp = [bool(t) for t in tmp]
@@ -319,7 +320,8 @@ class NNRunner(BaseRunner):
             i_list.extend(i)
 
         df = pd.DataFrame({"id": i_list, "label": p_list})
-        df.to_csv(cf.result_path, header=True, sep=",", index=False)
+        df.to_csv(cf.result_path + "/result.csv", header=True, sep=",",
+                  index=False)
 
         tmp = np.abs(np.array(i_list) - np.array(p_list))
         bool_tmp = [bool(t) for t in tmp]
