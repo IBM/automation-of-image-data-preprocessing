@@ -5,7 +5,7 @@ Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 import numpy as np
 from itertools import compress
 
-from sentana.app.ril.env_sim import EnvSim
+from autodp.rl_core.env.sim_env import SimEnv
 
 
 class BatchSimEnv(object):
@@ -19,46 +19,22 @@ class BatchSimEnv(object):
         :param image_batch:
         :param label_batch:
         """
-        self._envs = [EnvSim(i, l) for (i, l) in zip(image_batch, label_batch)]
+        self._envs = [SimEnv(i, l) for (i, l) in zip(image_batch, label_batch)]
 
-    def step(self, action_batch):
+    def step(self, action_batch, qout=None):
         """
         Step one step for each environment.
         :param action_batch:
-        :param qouts:
+        :param qout:
         :return:
         """
-        states, rewards, dones, trues = [], [], [], []
-        for (idx, env) in enumerate(self._envs):
-            state, reward, done = env.step(action_batch[idx])
-            states.append(state)
-            rewards.append(reward)
-            dones.append(done)
-            trues.append(env.get_label)
+        if qout is not None:
+            for (idx, env) in enumerate(self._envs):
+                env.step(action_batch[idx], qout[idx])
 
-        self._envs = list(compress(self._envs, np.logical_not(dones)))
-
-        return states, rewards, dones, trues
-
-    def step_valid(self, action_batch, qouts):
-        """
-        Step one step for each environment.
-        :param action_batch:
-        :param qouts:
-        :return:
-        """
-        states, rewards, dones, trues, actions = [], [], [], [], []
-        for (idx, env) in enumerate(self._envs):
-            state, reward, done, action = env.step_valid(action_batch[idx], qouts[idx])
-            states.append(state)
-            rewards.append(reward)
-            dones.append(done)
-            trues.append(env.get_label)
-            actions.append(action)
-
-        self._envs = list(compress(self._envs, np.logical_not(dones)))
-
-        return states, rewards, dones, trues, actions
+        else:
+            for (idx, env) in enumerate(self._envs):
+                env.step(action_batch[idx])
 
     def add(self, image_batch, label_batch):
         """
@@ -67,7 +43,7 @@ class BatchSimEnv(object):
         :param label_batch:
         :return:
         """
-        self._envs += [EnvSim(i, l) for (i, l) in zip(image_batch, label_batch)]
+        self._envs += [SimEnv(i, l) for (i, l) in zip(image_batch, label_batch)]
 
     def update_done(self, dones):
         """
@@ -105,12 +81,49 @@ class BatchSimEnv(object):
 
         return trues
 
-    def step_analysis(self, action_batch, qouts):
-        """
-        Step one step for each environment.
-        :param action_batch:
-        :param qouts:
-        :return:
-        """
-        for (idx, env) in enumerate(self._envs):
-            env.step_analysis(action_batch[idx], qouts[idx])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

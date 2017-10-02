@@ -69,8 +69,7 @@ class DualQ(BaseAgent):
 
             while len(image_batch) > 0.2*cf.batch_size:
                 # Select actions using the policy network
-                [actions, qout] = sess.run(
-                    [rl_graph.get_next_actions, rl_graph.get_qout],
+                actions = sess.run(rl_graph.get_next_actions,
                     feed_dict={rl_graph.get_instance: image_batch})
 
                 # Do exploration
@@ -82,7 +81,7 @@ class DualQ(BaseAgent):
                 #qouts = list(np.array(qouts) + qout[:, 0:cf.num_class])
 
                 # Do actions
-                env.step(actions, qout[:, 0:cf.num_class])
+                env.step(actions)
 
                 # Get train examples
                 train_batch = self._add_extra_example(env)
