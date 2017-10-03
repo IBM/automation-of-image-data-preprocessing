@@ -76,9 +76,6 @@ class SimEnv(object):
         if self._age > cf.max_age:
             if qout is None:
                 self.restart()
-                reward = None
-                done = False
-                return self._state, reward, done
 
             else:
                 action = np.argmax(qout)

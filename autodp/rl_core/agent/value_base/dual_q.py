@@ -69,7 +69,7 @@ class DualQ(BaseAgent):
 
             while len(image_batch) > 0.2*cf.batch_size:
                 # Select actions using the policy network
-                actions = sess.run(rl_graph.get_next_actions,
+                actions = sess.run(rl_graph.get_next_action,
                     feed_dict={rl_graph.get_instance: image_batch})
 
                 # Do exploration
@@ -143,11 +143,11 @@ class DualQ(BaseAgent):
                         reward_all, done_all, np.mean(err_list), best_valid))
                     err_list = []
 
-                    if early_stop >= 20:
+                    if early_stop >= 200:
                         print("Exit due to early stopping")
                         return
 
-    def predict(self, sess, rl_graph, reader, fh):
+    def predict(self, sess, rl_graph, reader, fh=None):
         """
         Apply the policy to predict image classification.
         :param sess:
@@ -175,7 +175,7 @@ class DualQ(BaseAgent):
             while len(image_batch) > 0.2 * cf.batch_size:
                 # Select actions using the policy network
                 [actions, qout] = sess.run(
-                    [rl_graph.get_next_actions, rl_graph.get_qout],
+                    [rl_graph.get_next_action, rl_graph.get_qout],
                     feed_dict={rl_graph.get_instance: image_batch})
 
                 # Do actions

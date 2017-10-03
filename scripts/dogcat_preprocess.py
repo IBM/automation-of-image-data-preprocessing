@@ -42,9 +42,9 @@ import random
 
 # Processing parameters
 SIZE = 50    # for ImageNet models compatibility
-TEST_DIR = '../data/dogcat/test/'
-TRAIN_DIR = '../data/dogcat/train/'
-BASE_DIR = '../data/dogcat/'
+TEST_DIR = "../storage/inputs/dogcat/test/"
+TRAIN_DIR = "../storage/inputs/dogcat/train/"
+BASE_DIR = "../storage/inputs/dogcat/"
 NUM_CHANNELS = 1
 
 
@@ -126,8 +126,8 @@ def prep_images(paths, out_file, bool_train):
         img_nrm = norm_image(img)
         img_res = resize_image(img_nrm, SIZE).convert('L')
 
-        line = {"img": np.reshape(img_res, [SIZE, SIZE, 1]),
-                "label": np.int32(label)}
+        line = {"i": np.reshape(img_res, [SIZE, SIZE, 1]),
+                "l": np.int32(label)}
         pickle.dump(line, writer, pickle.HIGHEST_PROTOCOL)
 
     writer.close()
@@ -145,8 +145,8 @@ def main():
     random.shuffle(train_cats)
     random.shuffle(train_dogs)
 
-    train_all = train_cats[:10000] + train_dogs[:10000]
-    valid_all = train_cats[10000:] + train_dogs[10000:]
+    train_all = train_cats[:100] + train_dogs[:100]
+    valid_all = train_cats[100:120] + train_dogs[100:120]
     random.shuffle(train_all)
     random.shuffle(valid_all)
     random.shuffle(train_all)
@@ -158,7 +158,7 @@ def main():
                       key=natural_key)
 
     # Make the output directories
-    base_out = os.path.join(BASE_DIR, 'data{}'.format(SIZE))
+    base_out = os.path.join(BASE_DIR, "small_data{}".format(SIZE))
     #train_dir_out = os.path.join(base_out, 'train')
     #test_dir_out = os.path.join(base_out, 'test')
     #os.makedirs(train_dir_out, exist_ok=True)

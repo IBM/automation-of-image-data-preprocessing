@@ -40,7 +40,7 @@ class Q2Graph(BaseGraph):
         (self._qout, self._aout, self._qmax) = self._inference(self._instance)
 
         # Define objective function and train operator
-        a_01 = tf.one_hot(self._actions, depth=cf.num_action,
+        a_01 = tf.one_hot(self._action, depth=cf.num_action,
                           axis=-1, dtype=tf.float32)
         self._pred = tf.reduce_sum(tf.multiply(self._qout, a_01), axis=1)
         self._train_loss(self._pred, self._target)
