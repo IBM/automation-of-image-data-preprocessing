@@ -61,7 +61,7 @@ class DualQ(BaseAgent):
         best_valid = -sys.maxsize
 
         # Start training the policy network
-        for (images, labels) in train_reader.get_batch():
+        for (images, labels) in train_reader.get_batch(sess=sess):
             # Add more images for batch processing
             image_batch.extend(images)
             #qouts.extend([[0]*cf.num_class] * len(images))
@@ -167,7 +167,7 @@ class DualQ(BaseAgent):
             clear_model_dir(cf.result_path)
 
         # Start to validate/test
-        for (images, labels) in reader.get_batch():
+        for (images, labels) in reader.get_batch(sess=sess):
             # Add more images for batch processing
             image_batch.extend(images)
             env.add(image_batch=images, label_batch=labels)

@@ -26,9 +26,11 @@ class MSE(Loss):
         :param weights:
         :return:
         """
-        tf.contrib.losses.mean_squared_error(predictions=self._preds,
-                                             labels=self._trues,
-                                             weights=weights)
+        loss = tf.contrib.losses.mean_squared_error(predictions=self._preds,
+                                                    labels=self._trues,
+                                                    weights=weights)
+
+        return loss
 
 
 

@@ -35,12 +35,12 @@ class TFReader(BaseReader):
         _, serialized_example = reader.read(file_queue)
         features = tf.parse_single_example(serialized_example, features={
             "i": tf.VarLenFeature(tf.string),
-            "l": tf.FixedLenFeature([], tf.int32)})
+            "l": tf.FixedLenFeature([], tf.int64)})
 
         # Convert from a scalar string tensor to a float tensor and reshape
         image = tf.reshape(tf.decode_raw(features["i"].values, tf.float32),
                            [cf.ima_height, cf.ima_width, cf.ima_depth])
-        label = features["l"]
+        label = tf.cast(features["l"], tf.int32)
 
         return image, label
 
@@ -81,9 +81,86 @@ class TFReader(BaseReader):
 
         # Return tensorflow records if sess is not passed else normal records
         if sess is not None:
-            images, labels = sess.run([images, labels])
+            #print([v.name for v in tf.local_variables()])
+            sess.run(tf.local_variables()[-1].initializer)
 
-        return (images, labels)
+            # Start reading tfrecords
+            coord = tf.train.Coordinator()
+            threads = tf.train.start_queue_runners(coord=coord)
+
+            try:
+                while not coord.should_stop():
+                    [image_batch, label_batch] = sess.run([images, labels])
+                    yield (image_batch, label_batch)
+
+            except tf.errors.OutOfRangeError:
+                pass
+
+            finally:
+                coord.request_stop()
+                coord.join(threads)
+
+        else:
+            yield (images, labels)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -37,6 +37,13 @@ class RLRunner(BaseRunner):
             # Setup neural network functions
             rl_graph = rl_agent.setup_policy()
 
+            # Initialize a data reader for train
+            reader_class = get_class(cf.reader)
+            train_reader = reader_class(cf.train_path, cf.num_epoch)
+
+            # Initialize a data reader for validation
+            valid_reader = reader_class(cf.valid_path)
+
             # Do initialization
             sess.run(tf.group(tf.global_variables_initializer(),
                               tf.local_variables_initializer()))
@@ -50,13 +57,6 @@ class RLRunner(BaseRunner):
                     saver.restore(sess, ckpt.model_checkpoint_path)
                 else:
                     warnings.warn("Model not exist, train a new model now")
-
-            # Initialize a data reader for train
-            reader_class = get_class(cf.reader)
-            train_reader = reader_class(cf.train_path, cf.num_epoch)
-
-            # Initialize a data reader for validation
-            valid_reader = reader_class(cf.valid_path)
 
             # Training
             rl_agent.train_policy(sess, rl_graph, train_reader, valid_reader)
@@ -75,6 +75,10 @@ class RLRunner(BaseRunner):
             # Setup neural network functions
             rl_graph = rl_agent.setup_policy()
 
+            # Initialize a data reader
+            reader_class = get_class(cf.reader)
+            reader = reader_class(cf.test_path, 1)
+
             # Do initialization
             sess.run(tf.group(tf.global_variables_initializer(),
                               tf.local_variables_initializer()))
@@ -86,10 +90,6 @@ class RLRunner(BaseRunner):
                 saver.restore(sess, ckpt.model_checkpoint_path)
             else:
                 warnings.warn("Model not exist, train a new model now")
-
-            # Initialize a data reader
-            reader_class = get_class(cf.reader)
-            reader = reader_class(cf.valid_path, 1)
 
             # Actual test
             reward, predict, actual = rl_agent.predict(sess, rl_graph,

@@ -48,9 +48,9 @@ class Loss(metaclass=abc.ABCMeta):
         :param weights:
         :return:
         """
-        self._compute_loss(weights=weights)
-        total_loss = tf.add_n(tf.get_collection(tf.GraphKeys.LOSSES),
-                              name="total_loss")
+        total_loss = self._compute_loss(weights=weights)
+#        total_loss = tf.add_n(tf.get_collection(tf.GraphKeys.LOSSES),
+#                              name="total_loss")
 
         return total_loss
 

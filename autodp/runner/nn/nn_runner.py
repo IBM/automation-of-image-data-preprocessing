@@ -400,15 +400,15 @@ class NNRunner(BaseRunner):
             # Build graph and do initialization
             if cf.reader.split(".")[-1] == "TFReader":
                 nng1 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                               name="nng1", tfreader=reader)
+                               name="train_nng", tfreader=reader)
                 nng2 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                               name="nng2", tfreader=reader)
+                               name="valid_nng", tfreader=reader)
 
             else:
                 nng1 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                               name="nng1")
+                               name="train_nng")
                 nng2 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                               name="nng2")
+                               name="valid_nng")
 
             sess.run(tf.group(tf.global_variables_initializer(),
                               tf.local_variables_initializer()))
@@ -422,16 +422,16 @@ class NNRunner(BaseRunner):
                 raise IOError("Model not exist")
 
             # Start to test
+            pred = tf.arg_max(tf.nn.softmax(nng2.get_pred), dimension=1)
             if cf.reader.split(".")[-1] == "TFReader":
-                accuracy = self._test_with_tfreader(sess, nng1.get_pred,
-                                                    nng1.get_label)
+                accuracy = self._test_with_tfreader(sess, pred,
+                                                    nng2.get_label)
 
             else:
-                accuracy = self._test_with_sqreader(sess, reader,
-                                                    nng1.get_pred,
-                                                    nng1.get_label,
-                                                    nng1.get_instance,
-                                                    nng1.get_label)
+                accuracy = self._test_with_sqreader(sess, reader, pred,
+                                                    nng2.get_label,
+                                                    nng2.get_instance,
+                                                    nng2.get_label)
 
         return accuracy
 

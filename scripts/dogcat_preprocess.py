@@ -38,12 +38,16 @@ from PIL import Image
 import pickle
 import bz2
 import random
+import tensorflow as tf
+
+from autodp.utils.tf_utils import bytes_feature
+from autodp.utils.tf_utils import int64_feature
 
 
 # Processing parameters
 SIZE = 50    # for ImageNet models compatibility
-TEST_DIR = "../storage/inputs/dogcat/test/"
-TRAIN_DIR = "../storage/inputs/dogcat/train/"
+TEST_DIR = "../storage/inputs/dogcat/origin/test/"
+TRAIN_DIR = "../storage/inputs/dogcat/origin/train/"
 BASE_DIR = "../storage/inputs/dogcat/"
 NUM_CHANNELS = 1
 
@@ -145,8 +149,8 @@ def main():
     random.shuffle(train_cats)
     random.shuffle(train_dogs)
 
-    train_all = train_cats[:100] + train_dogs[:100]
-    valid_all = train_cats[100:120] + train_dogs[100:120]
+    train_all = train_cats[:10000] + train_dogs[:10000]
+    valid_all = train_cats[10000:] + train_dogs[10000:]
     random.shuffle(train_all)
     random.shuffle(valid_all)
     random.shuffle(train_all)
@@ -158,23 +162,25 @@ def main():
                       key=natural_key)
 
     # Make the output directories
-    base_out = os.path.join(BASE_DIR, "small_data{}".format(SIZE))
+    base_out = os.path.join(BASE_DIR, "data{}".format(SIZE))
     #train_dir_out = os.path.join(base_out, 'train')
     #test_dir_out = os.path.join(base_out, 'test')
     #os.makedirs(train_dir_out, exist_ok=True)
     #os.makedirs(test_dir_out, exist_ok=True)
-    os.makedirs(base_out, exist_ok=True)
+    os.makedirs(base_out + "/train", exist_ok=True)
+    os.makedirs(base_out + "/valid", exist_ok=True)
+    os.makedirs(base_out + "/test", exist_ok=True)
 
     # Preprocess the training files
     procs = dict()
     procs[1] = Process(target=prep_images, args=(train_all, os.path.join(
-        base_out, "train.bz2"), True, ))
+        base_out, "train", "train.bz2"), True, ))
     procs[1].start()
     procs[2] = Process(target=prep_images, args=(valid_all, os.path.join(
-        base_out, "valid.bz2"), True, ))
+        base_out, "valid", "valid.bz2"), True, ))
     procs[2].start()
     procs[3] = Process(target=prep_images, args=(test_all, os.path.join(
-        base_out, "test.bz2"), False, ))
+        base_out, "test", "test.bz2"), False, ))
     procs[3].start()
 
     procs[1].join()
@@ -182,8 +188,53 @@ def main():
     procs[3].join()
 
 
+def convert_2tf():
+    """
+    This function helps convert to tfrecords.
+    :return:
+    """
+    set = ["train", "valid", "test"]
+
+    for s in set:
+        ins = os.path.join(BASE_DIR, "data50", s, s + ".bz2")
+        outs = os.path.join(BASE_DIR, "data50", "tf_" + s)
+        os.makedirs(outs, exist_ok=True)
+        ofs = [tf.python_io.TFRecordWriter(
+            outs + "/{}.tfr".format(i)) for i in range(5)]
+
+        with bz2.BZ2File(ins, "rb") as df:
+            while True:
+                try:
+                    line = pickle.load(df)
+
+                    # Write tf records
+                    tf_record = wrap_image(line["i"].astype(np.float32),
+                                           int(line["l"]))
+                    tf_writer = ofs[np.random.randint(0, 5)]
+                    tf_writer.write(tf_record.SerializeToString())
+                except EOFError:
+                    break
+
+        for i in range(5): ofs[i].close()
+
+
+def wrap_image(image, label_score):
+    """
+    This function is used to wrap an image into a tfrecord.
+    :param image: a standard image
+    :param label_score: label of the image
+    :return:
+    """
+    example = tf.train.Example(features=tf.train.Features(feature={
+        "i": bytes_feature(image.tostring()),
+        "l": int64_feature(label_score)}))
+
+    return example
+
+
 if __name__ == '__main__':
     main()
+    convert_2tf()
 
 
 

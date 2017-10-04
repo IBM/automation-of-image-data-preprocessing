@@ -6,6 +6,7 @@ import os
 
 import bz2
 import pickle
+import numpy as np
 
 from autodp.reader.base_reader import BaseReader
 from autodp.config.cf_container import Config as cf
@@ -41,7 +42,7 @@ class SQReader(BaseReader):
         for _ in range(batch_size):
             try:
                 line = pickle.load(data_file)
-                images.append(line["i"])
+                images.append(line["i"].astype(np.float32))
                 labels.append(line["l"])
             except EOFError:
                 break

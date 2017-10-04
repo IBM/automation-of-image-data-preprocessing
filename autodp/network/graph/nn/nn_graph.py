@@ -31,7 +31,8 @@ class NNGraph(BaseGraph):
         """
         # The tensor inputs are defined depending on the type of reader used.
         if tfreader is not None:
-            (images, labels) = tfreader.get_batch(batch_size=cf.batch_size)
+            (images, labels) = next(tfreader.get_batch(
+                batch_size=cf.batch_size))
             self._instance = images
             self._target = labels
         else:
@@ -42,6 +43,15 @@ class NNGraph(BaseGraph):
         # Define network architecture, objective function and train operator
         self._pred = self._inference(self._instance)
         self._train_loss(self._pred, self._target)
+
+
+
+
+
+
+
+
+
 
 
 
