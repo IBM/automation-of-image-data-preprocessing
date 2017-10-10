@@ -3,20 +3,27 @@ The IBM License 2017.
 Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
 import sys
+import os
 
 import numpy as np
 from itertools import compress
 import tensorflow as tf
+import warnings
 
 from autodp.rl_core.agent.base_agent import BaseAgent
 from autodp.config.cf_container import Config as cf
 from autodp.utils.misc import get_class
 from autodp.rl_core.env.batch_env import BatchSimEnv
 from autodp.utils.misc import clear_model_dir
+from autodp.rl_core.sup.exp_buffer import ExpBuffer
+from autodp.utils.misc import from_pickle
+from autodp.utils.misc import to_pickle
+from autodp.utils.tf_utils import copy_network
+from autodp.utils.tf_utils import update_network
 from autodp.utils.misc import softmax
 
 
-class DualQ(BaseAgent):
+class ExpDualDoubleQ(BaseAgent):
     """
     This class implements a RL algorithm using a dual-q network.
     """
@@ -24,31 +31,44 @@ class DualQ(BaseAgent):
         """
         Initialization.
         """
+        self._exp_buf = None
         super().__init__()
 
     def _setup_policy(self):
         """
-        Build network to approximate an action-value function.
+        Build 2 networks: one to approximate an action-value function
+        and the other to select actions.
         :return:
         """
-        # Construct a reinforcement learning graph
+        # Construct 2 reinforcement learning graphs
         rl_graph_class = get_class(cf.rl_graph)
-        self._rl_graph = rl_graph_class(net_arch=cf.rl_arch, loss_func=cf.rl_loss,
-                                  name="rl_graph")
+        self._main_graph = rl_graph_class(net_arch=cf.rl_arch,
+                                          loss_func=cf.rl_loss,
+                                          name="main_graph")
+        self._target_graph = rl_graph_class(net_arch=cf.rl_arch,
+                                            loss_func=cf.rl_loss,
+                                            name="target_graph")
 
     def load_specific_objects(self):
         """
-        Do nothing.
+        This overwritten method initializes an experimental buffer object
+        needed to continue learning.
         :return:
         """
-        pass
+        if os.path.isfile(cf.save_model + "/rl/exp_buf.pkl"):
+            self._exp_buf = from_pickle(cf.save_model + "/rl/exp_buf.pkl")
+        else:
+            warnings.warn("Experimental buffer not exist, "
+                          "continue learning with new buffer")
+            self._exp_buf = ExpBuffer(cf.buf_size)
 
     def save_specific_objects(self):
         """
-        Do nothing.
+        This overwritten method stores an experimental buffer object
+        needed to continue learning.
         :return:
         """
-        pass
+        to_pickle(cf.save_model + "/rl/exp_buf.pkl", self._exp_buf)
 
     def train_policy(self, sess, train_reader, valid_reader):
         """
@@ -58,6 +78,13 @@ class DualQ(BaseAgent):
         :param valid_reader:
         :return:
         """
+        # Copy between the 2 graphs
+        update_ops = copy_network(tf.trainable_variables(), cf.dbl_coef)
+
+        # Initialize an exp buffer if it is not initialized yet
+        if self._exp_buf is None:
+            self._exp_buf = ExpBuffer(cf.buf_size)
+
         # Define the step drop for exploration
         step_drop = (cf.max_explore - cf.min_explore) / cf.anneal_step
 
@@ -68,7 +95,6 @@ class DualQ(BaseAgent):
         reward_all = 0
         done_all = 0
         early_stop = 0
-        #qouts = []
         err_list = []
         best_valid = -sys.maxsize
 
@@ -76,53 +102,54 @@ class DualQ(BaseAgent):
         for (images, labels) in train_reader.get_batch(sess=sess):
             # Add more images for batch processing
             image_batch.extend(images)
-            #qouts.extend([[0]*cf.num_class] * len(images))
             env.add(image_batch=images, label_batch=labels)
 
             while len(image_batch) > 0:
                 # Select actions using the policy network
-                actions = sess.run(self._rl_graph.get_next_action,
-                    feed_dict={self._rl_graph.get_instance: image_batch})
+                actions = sess.run(self._main_graph.get_next_action,
+                    feed_dict={self._main_graph.get_instance: image_batch})
 
                 # Do exploration
                 for i in range(len(actions)):
                     if np.random.rand(1) < cf.max_explore:
                         actions[i] = np.random.randint(0, cf.num_action)
 
-                # Update qouts
-                #qouts = list(np.array(qouts) + qout[:, 0:cf.num_class])
-
                 # Do actions
                 env.step(actions)
 
                 # Get train examples
-                train_batch = self._add_extra_example(env)
+                extra_batch = self._add_extra_example(env)
+                self._exp_buf.add(extra_batch)
 
                 # Decrease the exploration
                 if cf.max_explore > cf.min_explore:
                     cf.max_explore -= step_drop
 
                 # Train and update the policy network
-                if len(train_batch) > 0:
+                if self._exp_buf.get_size > 2*cf.batch_size:
+                    # Get train batch
+                    train_batch = self._exp_buf.sample(2*cf.batch_size)
                     i_states = np.array([e[0] for e in train_batch])
                     i_actions = np.array([e[1] for e in train_batch])
                     o_states = np.array([e[2] for e in train_batch])
                     i_rewards = np.array([e[3] for e in train_batch])
                     end_mul = np.array([1 - e[4] for e in train_batch])
 
-                    qmax = sess.run(self._rl_graph.get_qmax,
-                        feed_dict={self._rl_graph.get_instance: o_states})
-                    #qmax[np.where(qmax < -1)] = -1
-                    #qmax[np.where(qmax > 1)] = 1
+                    # Compute target q values
+                    target_action = sess.run(self._main_graph.get_next_action,
+                        feed_dict={self._main_graph.get_instance: o_states})
+                    target_qout = sess.run(self._target_graph.get_qout,
+                        feed_dict={self._target_graph.get_instance: o_states})
+                    qmax = target_qout[range(2*cf.batch_size), target_action]
                     target = i_rewards + cf.gamma * qmax * end_mul
-                    #target[np.where(target < -1)] = -1
-                    #target[np.where(target > 1)] = 1
 
-                    [_, err] = sess.run([self._rl_graph.get_train_step,
-                        self._rl_graph.get_error], feed_dict={
-                        self._rl_graph.get_instance: i_states,
-                        self._rl_graph.get_current_action: i_actions,
-                        self._rl_graph.get_label: target})
+                    # Train the 2 networks
+                    [_, err] = sess.run([self._main_graph.get_train_step,
+                        self._main_graph.get_error], feed_dict={
+                        self._main_graph.get_instance: i_states,
+                        self._main_graph.get_current_action: i_actions,
+                        self._main_graph.get_label: target})
+                    update_network(sess, update_ops)
                     err_list.append(err)
 
                 # Update input data after 1 step
@@ -131,7 +158,6 @@ class DualQ(BaseAgent):
                 done_all += sum(dones)
                 num_step += 1
                 image_batch = list(compress(states, np.logical_not(dones)))
-                #qouts = list(compress(qouts, np.logical_not(dones)))
                 env.update_done(dones)
 
                 # Do validation after a number of steps
@@ -189,8 +215,8 @@ class DualQ(BaseAgent):
             while len(image_batch) > 0:
                 # Select actions using the policy network
                 [actions, qout] = sess.run(
-                    [self._rl_graph.get_next_action, self._rl_graph.get_qout],
-                    feed_dict={self._rl_graph.get_instance: image_batch})
+                    [self._main_graph.get_next_action, self._main_graph.get_qout],
+                    feed_dict={self._main_graph.get_instance: image_batch})
 
                 # Do actions
                 env.step(actions, qout[:, 0:cf.num_class])

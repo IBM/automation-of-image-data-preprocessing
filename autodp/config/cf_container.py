@@ -51,12 +51,14 @@ class Config(object):
     rl_agent = config_parser.get("rl_param", "rl_agent")
     num_action = int(config_parser.get("rl_param", "num_action"))
     max_explore = float(config_parser.get("rl_param", "max_explore"))
+    buf_size = int(config_parser.get("rl_param", "buf_size"))
 
     # Trainable via hypertuning
     min_explore = float(config_parser.get("rl_param", "min_explore"))
     anneal_step = float(config_parser.get("rl_param", "anneal_step"))
     gamma = float(config_parser.get("rl_param", "gamma"))
     max_age = int(config_parser.get("rl_param", "max_age"))
+    dbl_coef = float(config_parser.get("rl_param", "dbl_coef"))
 
 
 

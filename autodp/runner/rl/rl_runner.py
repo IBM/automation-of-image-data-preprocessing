@@ -32,10 +32,7 @@ class RLRunner(BaseRunner):
         with tf.Graph().as_default(), tf.Session() as sess:
             # Initialize rl agent
             rl_agent_class = get_class(cf.rl_agent)
-            rl_agent = rl_agent_class(cont)
-
-            # Setup neural network functions
-            rl_graph = rl_agent.setup_policy()
+            rl_agent = rl_agent_class()
 
             # Initialize a data reader for train
             reader_class = get_class(cf.reader)
@@ -55,11 +52,15 @@ class RLRunner(BaseRunner):
                 ckpt = tf.train.get_checkpoint_state(cf.save_model + "/rl")
                 if ckpt and ckpt.model_checkpoint_path:
                     saver.restore(sess, ckpt.model_checkpoint_path)
+
                 else:
                     warnings.warn("Model not exist, train a new model now")
 
+                # Load specific objects
+                rl_agent.load_specific_objects()
+
             # Training
-            rl_agent.train_policy(sess, rl_graph, train_reader, valid_reader)
+            rl_agent.train_policy(sess, train_reader, valid_reader)
 
     def test_model(self, fh=None):
         """
@@ -71,9 +72,6 @@ class RLRunner(BaseRunner):
             # Initialize rl agent
             rl_agent_class = get_class(cf.rl_agent)
             rl_agent = rl_agent_class()
-
-            # Setup neural network functions
-            rl_graph = rl_agent.setup_policy()
 
             # Initialize a data reader
             reader_class = get_class(cf.reader)
@@ -88,12 +86,12 @@ class RLRunner(BaseRunner):
             ckpt = tf.train.get_checkpoint_state(cf.save_model + "/rl")
             if ckpt and ckpt.model_checkpoint_path:
                 saver.restore(sess, ckpt.model_checkpoint_path)
+
             else:
                 warnings.warn("Model not exist, train a new model now")
 
             # Actual test
-            reward, predict, actual = rl_agent.predict(sess, rl_graph,
-                                                       reader, fh)
+            reward, predict, actual, prob = rl_agent.predict(sess, reader, fh)
 
             # Accuracy
             tmp = np.abs(np.array(actual)-np.array(predict))
@@ -101,9 +99,10 @@ class RLRunner(BaseRunner):
             accuracy = 1-sum(bool_tmp)/float(len(actual))
 
             # Support kaggle output
-            df = pd.DataFrame({"id": actual, "label": predict})
-            df.to_csv(cf.result_path + "/result.csv", header=True, sep=",",
-                      index=False)
+            df = pd.concat([pd.DataFrame({"id": actual, "label": predict}),
+                pd.DataFrame(np.array(prob))], axis=1)
+            df.to_csv(cf.result_path + "/result.csv", header=True,
+                      sep=",", index=False)
 
         return accuracy, reward, predict, actual
 

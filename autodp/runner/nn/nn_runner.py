@@ -16,6 +16,7 @@ from autodp.network.graph.nn.nn_graph import NNGraph
 from autodp.config.cf_container import Config as cf
 from autodp.utils.misc import get_class
 from autodp.utils.tf_utils import copy_network
+from autodp.utils.tf_utils import update_network
 
 
 @BaseRunner.register
@@ -108,13 +109,15 @@ class NNRunner(BaseRunner):
 
         return p, i
 
-    def _train_with_tfreader(self, sess, train_op, train_err_op, valid_err_op):
+    def _train_with_tfreader(self, sess, train_op, train_err_op,
+                             valid_err_op, update_ops):
         """
         Do training with a tfreader.
         :param sess:
         :param train_op:
         :param train_err_op:
         :param valid_err_op:
+        :param update_ops:
         :return:
         """
         coord = tf.train.Coordinator()
@@ -132,7 +135,7 @@ class NNRunner(BaseRunner):
 
                 # Do validation
                 if step % cf.valid_step == 0:
-                    copy_network(sess, tf.trainable_variables())
+                    update_network(sess, update_ops)
                     valid_err = self._valid_with_tfreader(sess, valid_err_op)
 
                     if valid_err < best_valid:
@@ -224,7 +227,8 @@ class NNRunner(BaseRunner):
 
     def _train_with_sqreader(self, sess, train_reader, valid_reader, train_op,
                              train_err_op, valid_err_op, train_image_op,
-                             train_label_op, valid_image_op, valid_label_op):
+                             train_label_op, valid_image_op, valid_label_op,
+                             update_ops):
         """
         Do training with a sqreader.
         :param sess:
@@ -237,6 +241,7 @@ class NNRunner(BaseRunner):
         :param train_label_op:
         :param valid_image_op:
         :param valid_label_op:
+        :param update_ops:
         :return:
         """
         step, err_list = 0, []
@@ -251,7 +256,7 @@ class NNRunner(BaseRunner):
 
             # Do validation
             if step % cf.valid_step == 0:
-                copy_network(sess, tf.trainable_variables())
+                update_network(sess, update_ops)
                 valid_err = self._valid_with_sqreader(sess, valid_reader,
                                                       valid_err_op,
                                                       valid_image_op,
@@ -356,6 +361,9 @@ class NNRunner(BaseRunner):
                 valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
                                     name="valid_nng")
 
+            # Copy network between train and validation
+            update_ops = copy_network(tf.trainable_variables())
+
             sess.run(tf.group(tf.global_variables_initializer(),
                               tf.local_variables_initializer()))
 
@@ -363,8 +371,7 @@ class NNRunner(BaseRunner):
             if cont:
                 # Load the model
                 saver = tf.train.Saver(tf.global_variables())
-                ckpt = tf.train.get_checkpoint_state(os.path.dirname(
-                    cf.save_model + "/nn/model"))
+                ckpt = tf.train.get_checkpoint_state(cf.save_model + "/nn")
                 if ckpt and ckpt.model_checkpoint_path:
                     saver.restore(sess, ckpt.model_checkpoint_path)
 
@@ -375,7 +382,8 @@ class NNRunner(BaseRunner):
             if cf.reader.split(".")[-1] == "TFReader":
                 self._train_with_tfreader(sess, train_nng.get_train_step,
                                           train_nng.get_error,
-                                          valid_nng.get_error)
+                                          valid_nng.get_error,
+                                          update_ops)
 
             else:
                 self._train_with_sqreader(sess, train_reader, valid_reader,
@@ -385,7 +393,8 @@ class NNRunner(BaseRunner):
                                           train_nng.get_instance,
                                           train_nng.get_label,
                                           valid_nng.get_instance,
-                                          valid_nng.get_label)
+                                          valid_nng.get_label,
+                                          update_ops)
 
     def test_model(self):
         """
@@ -418,6 +427,7 @@ class NNRunner(BaseRunner):
             ckpt = tf.train.get_checkpoint_state(cf.save_model + "/nn")
             if ckpt and ckpt.model_checkpoint_path:
                 saver.restore(sess, ckpt.model_checkpoint_path)
+
             else:
                 raise IOError("Model not exist")
 

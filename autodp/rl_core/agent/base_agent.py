@@ -17,24 +17,12 @@ class BaseAgent(metaclass=abc.ABCMeta):
     This abstract class defines methods exposed by a reinforcement learning
     agent.
     """
-    def __init__(self, cont):
+    def __init__(self):
         """
         Initialization.
         """
-        if cont:
-            self._load_specific_objects()
-
-    def _load_specific_objects(self):
-        """
-        This method can be overwritten to initialize specific objects needed
-        to continue learning.
-        :return:
-        """
-        # Load exp
-        # if os.path.isfile(os.path.dirname(cf.save_model) + "/exp.pkl"):
-        #     exp_buf = from_pickle(os.path.dirname(
-        #         cf.save_model) + "/exp.pkl")
-        pass
+        # Setup neural network functions
+        self._setup_policy()
 
     @staticmethod
     def _add_extra_example(env):
@@ -120,7 +108,7 @@ class BaseAgent(metaclass=abc.ABCMeta):
         return idx
 
     @abc.abstractmethod
-    def setup_policy(self):
+    def _setup_policy(self):
         """
         Build one or more networks to approximate value, action-value and
         policy functions.
@@ -128,25 +116,43 @@ class BaseAgent(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def train_policy(self, sess, rl_graph, train_reader, valid_reader):
+    def load_specific_objects(self):
+        """
+        This method can be overwritten to initialize specific objects needed
+        to continue learning.
+        :return:
+        """
+
+    @abc.abstractmethod
+    def save_specific_objects(self):
+        """
+        This method can be overwritten to store specific objects needed
+        to continue learning.
+        :return:
+        """
+
+    @abc.abstractmethod
+    def train_policy(self, sess, train_reader, valid_reader):
         """
         Policy improvement and evaluation.
         :param sess:
-        :param rl_graph:
         :param train_reader:
         :param valid_reader:
         :return:
         """
 
     @abc.abstractmethod
-    def predict(self, sess, rl_graph, reader):
+    def predict(self, sess, reader):
         """
         Apply the policy to predict image classification.
         :param sess:
-        :param rl_graph:
         :param reader:
         :return:
         """
+
+
+
+
 
 
 
