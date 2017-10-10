@@ -25,9 +25,11 @@ class BaseRunner(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def test_model(self):
+    def test_model(self, path, fh):
         """
         Main method for testing.
+        :param path:
+        :param fh:
         :return:
         """
 

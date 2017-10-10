@@ -2,11 +2,16 @@
 The IBM License 2017.
 Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
+import os
+
 import tensorflow as tf
+import warnings
 
 from autodp.runner.nn.nn_runner import NNRunner
 from autodp.utils.misc import get_class
 from autodp.config.cf_container import Config as cf
+from autodp.network.graph.nn.nn_graph import NNGraph
+from autodp.utils.tf_utils import copy_network
 
 
 class CLRunner(NNRunner):
@@ -30,9 +35,13 @@ class CLRunner(NNRunner):
             rl_agent_class = get_class(cf.rl_agent)
             rl_agent = rl_agent_class()
 
-            # Initialize a data reader
+            # Initialize data readers
             reader_class = get_class(cf.reader)
-            reader = reader_class(cf.test_path, 1)
+            train_reader = reader_class(cf.train_path)
+            valid_reader = reader_class(cf.valid_path)
+            test_reader = reader_class(cf.test_path)
+            readers = [train_reader, valid_reader, test_reader]
+            locations = ["pp_train", "pp_valid", "pp_test"]
 
             # Do initialization
             sess.run(tf.group(tf.global_variables_initializer(),
@@ -43,10 +52,75 @@ class CLRunner(NNRunner):
             ckpt = tf.train.get_checkpoint_state(cf.save_model + "/rl")
             if ckpt and ckpt.model_checkpoint_path:
                 saver.restore(sess, ckpt.model_checkpoint_path)
+            else:
+                raise ("Model not exist")
+
+            # Do preprocessing
+            rl_agent.preprocess(sess, readers, locations)
+
+    def train_model(self):
+        """
+        Main method for training.
+        :return:
+        """
+        with tf.Graph().as_default(), tf.Session() as sess:
+            # Initialize a data reader for train
+            reader_class = get_class(cf.reader)
+            train_reader = reader_class(os.path.join(cf.prep_path, "pp_train"),
+                                        cf.num_epoch)
+
+            # Initialize a data reader for validation
+            valid_reader = reader_class(os.path.join(cf.prep_path, "pp_valid"))
+
+            # Build graph and do initialization
+            if cf.reader.split(".")[-1] == "TFReader":
+                train_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
+                                    name="main_graph", tfreader=train_reader)
+                valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
+                                    name="valid_nng", tfreader=valid_reader)
+
+            else:
+                train_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
+                                    name="main_graph")
+                valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
+                                    name="valid_nng")
+
+            # Copy network between train and validation
+            update_ops = copy_network(tf.trainable_variables())
+
+            # Do initialization
+            sess.run(tf.group(tf.global_variables_initializer(),
+                              tf.local_variables_initializer()))
+
+            # Load existing model to continue training
+            # Load the model
+            common_vars = tf.global_variables()[:2*(len(
+                cf.kernel_size) + len(cf.fc_size))]
+            saver = tf.train.Saver(common_vars)
+            ckpt = tf.train.get_checkpoint_state(cf.save_model + "/rl")
+            if ckpt and ckpt.model_checkpoint_path:
+                saver.restore(sess, ckpt.model_checkpoint_path)
 
             else:
                 warnings.warn("Model not exist, train a new model now")
 
-    def train_model(self):
+            # Start to train
+            if cf.reader.split(".")[-1] == "TFReader":
+                self._train_with_tfreader(sess, train_nng.get_train_step,
+                                          train_nng.get_error,
+                                          valid_nng.get_error,
+                                          update_ops)
+
+            else:
+                self._train_with_sqreader(sess, train_reader, valid_reader,
+                                          train_nng.get_train_step,
+                                          train_nng.get_error,
+                                          valid_nng.get_error,
+                                          train_nng.get_instance,
+                                          train_nng.get_label,
+                                          valid_nng.get_instance,
+                                          valid_nng.get_label,
+                                          update_ops)
+
 
 

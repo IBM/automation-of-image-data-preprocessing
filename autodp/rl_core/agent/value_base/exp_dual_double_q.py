@@ -9,6 +9,7 @@ import numpy as np
 from itertools import compress
 import tensorflow as tf
 import warnings
+import bz2
 
 from autodp.rl_core.agent.base_agent import BaseAgent
 from autodp.config.cf_container import Config as cf
@@ -235,6 +236,75 @@ class ExpDualDoubleQ(BaseAgent):
                 env.update_done(dones)
 
         return reward_all, label_predict, label_actual, label_prob
+
+    def preprocess(self, sess, readers, locations):
+        """
+        Method to do preprocessing.
+        :param sess:
+        :param readers:
+        :param locations:
+        :return:
+        """
+        # Initialize variables
+        env = BatchSimEnv()
+        image_batch = []
+
+        # Start to preprocess
+        for (reader, location) in zip(readers, locations):
+            # Initialize file handles
+            clear_model_dir(os.path.join(cf.prep_path, location))
+            if cf.reader.split(".")[-1] == "TFReader":
+                fh = [tf.python_io.TFRecordWriter(os.path.join(cf.prep_path,
+                    location) + "/{}.tfr".format(i)) for i in range(5)]
+            else:
+                fh = bz2.BZ2File(os.path.join(cf.prep_path, location,
+                                              location + ".bz2"), "wb")
+
+            # Preprocess images and store them
+            for (images, labels) in reader.get_batch(sess=sess):
+                # Add more images for batch processing
+                image_batch.extend(images)
+                env.add(image_batch=images, label_batch=labels)
+
+                while len(image_batch) > 0:
+                    # Select actions using the policy network
+                    [actions, qout] = sess.run(
+                        [self._main_graph.get_next_action,
+                        self._main_graph.get_qout],
+                        feed_dict={self._main_graph.get_instance: image_batch})
+
+                    # Do actions
+                    env.step(actions, qout[:, 0:cf.num_class])
+
+                    # Collect predictions
+                    _, dones, states, _, trues = self._compute_done(env)
+
+                    # Store images
+                    self._store_prep_images(fh, list(compress(states, dones)),
+                                            list(compress(trues, dones)))
+
+                    image_batch = list(compress(states, np.logical_not(dones)))
+                    env.update_done(dones)
+
+            # Finish, close files
+            if cf.reader.split(".")[-1] == "TFReader":
+                for i in range(5): fh[i].close()
+            else:
+                fh.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

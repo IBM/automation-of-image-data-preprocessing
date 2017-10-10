@@ -62,9 +62,10 @@ class RLRunner(BaseRunner):
             # Training
             rl_agent.train_policy(sess, train_reader, valid_reader)
 
-    def test_model(self, fh=None):
+    def test_model(self, path=cf.test_path, fh=None):
         """
         Main method for testing.
+        :param path:
         :param fh:
         :return:
         """
@@ -75,7 +76,7 @@ class RLRunner(BaseRunner):
 
             # Initialize a data reader
             reader_class = get_class(cf.reader)
-            reader = reader_class(cf.test_path, 1)
+            reader = reader_class(path)
 
             # Do initialization
             sess.run(tf.group(tf.global_variables_initializer(),

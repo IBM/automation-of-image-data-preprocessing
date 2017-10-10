@@ -14,6 +14,7 @@ class Config(object):
     train_path = config_parser.get("general_param", "train_path")
     valid_path = config_parser.get("general_param", "valid_path")
     test_path = config_parser.get("general_param", "test_path")
+    prep_path = config_parser.get("general_param", "prep_path")
     result_path = config_parser.get("general_param", "result_path")
     save_model = config_parser.get("general_param", "save_model")
     ima_height = int(config_parser.get("general_param", "ima_height"))

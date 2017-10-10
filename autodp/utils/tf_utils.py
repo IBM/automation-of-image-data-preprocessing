@@ -138,6 +138,20 @@ def update_network(sess, ops):
     sess.run(ops)
 
 
+def wrap_image(image, label_score):
+    """
+    This function is used to wrap an image into a tfrecord.
+    :param image: a standard image
+    :param label_score: label of the image
+    :return:
+    """
+    example = tf.train.Example(features=tf.train.Features(feature={
+        "i": bytes_feature(image.tostring()),
+        "l": int64_feature(label_score)}))
+
+    return example
+
+
 def create_graph(model):
     """"Creates a graph from saved GraphDef file and returns a saver."""
     # Creates graph from saved graph_def.pb.

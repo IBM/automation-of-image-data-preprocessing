@@ -8,8 +8,10 @@ import abc
 import cv2 as cv
 from PIL import Image
 import numpy as np
+import pickle
 
 from autodp.config.cf_container import Config as cf
+from autodp.utils.tf_utils import wrap_image
 
 
 class BaseAgent(metaclass=abc.ABCMeta):
@@ -106,6 +108,26 @@ class BaseAgent(metaclass=abc.ABCMeta):
                 fh.write(info)
 
         return idx
+
+    @staticmethod
+    def _store_prep_images(fh, images, labels):
+        """
+        Store preprocessed images.
+        :param fh:
+        :param images:
+        :param labels:
+        :return:
+        """
+        if cf.reader.split(".")[-1] == "TFReader":
+            for (image, label) in zip(images, labels):
+                tf_record = wrap_image(image, int(label))
+                tf_writer = fh[np.random.randint(0, 5)]
+                tf_writer.write(tf_record.SerializeToString())
+
+        else:
+            for (image, label) in zip(images, labels):
+                line = {"i": image, "l": label}
+                pickle.dump(line, fh, pickle.HIGHEST_PROTOCOL)
 
     @abc.abstractmethod
     def _setup_policy(self):

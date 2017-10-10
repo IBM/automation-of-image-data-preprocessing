@@ -351,13 +351,13 @@ class NNRunner(BaseRunner):
             # Build graph and do initialization
             if cf.reader.split(".")[-1] == "TFReader":
                 train_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                                    name="train_nng", tfreader=train_reader)
+                                    name="main_graph", tfreader=train_reader)
                 valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
                                     name="valid_nng", tfreader=valid_reader)
 
             else:
                 train_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                                    name="train_nng")
+                                    name="main_graph")
                 valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
                                     name="valid_nng")
 
@@ -396,26 +396,28 @@ class NNRunner(BaseRunner):
                                           valid_nng.get_label,
                                           update_ops)
 
-    def test_model(self):
+    def test_model(self, path=cf.test_path, fh=None):
         """
         Main method for testing.
+        :param path:
+        :param fh:
         :return:
         """
         with tf.Graph().as_default(), tf.Session() as sess:
             # Initialize a data reader
             reader_class = get_class(cf.reader)
-            reader = reader_class(cf.test_path)
+            reader = reader_class(path)
 
             # Build graph and do initialization
             if cf.reader.split(".")[-1] == "TFReader":
                 nng1 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                               name="train_nng", tfreader=reader)
+                               name="main_graph", tfreader=reader)
                 nng2 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
                                name="valid_nng", tfreader=reader)
 
             else:
                 nng1 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                               name="train_nng")
+                               name="main_graph")
                 nng2 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
                                name="valid_nng")
 
