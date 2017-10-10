@@ -160,7 +160,7 @@ class DualQ(BaseAgent):
                         reward_all, done_all, np.mean(err_list), best_valid))
                     err_list = []
 
-                    if early_stop >= 200:
+                    if early_stop >= 30:
                         print("Exit due to early stopping")
                         return
 
