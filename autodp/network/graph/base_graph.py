@@ -14,18 +14,17 @@ class BaseGraph(metaclass=abc.ABCMeta):
     """
     This is a base class that helps build the tensorflow graph.
     """
-    def __init__(self, net_arch, loss_func, name, tfreader):
+    def __init__(self, net_arch, loss_func, name):
         """
         Initialization of building a graph.
         :param net_arch:
         :param loss_func:
         :param name:
-        :param tfreader:
         """
         self._net_arch = net_arch
         self._loss_func = loss_func
         self._name = name
-        self._build_model(tfreader)
+        self._build_model()
 
     def _inference(self, instance):
         """
@@ -81,10 +80,9 @@ class BaseGraph(metaclass=abc.ABCMeta):
         self._train_step = self._train(self._obj_func)
 
     @abc.abstractmethod
-    def _build_model(self, tfreader):
+    def _build_model(self):
         """
         Build the total graph.
-        :param tfreader:
         :return:
         """
 

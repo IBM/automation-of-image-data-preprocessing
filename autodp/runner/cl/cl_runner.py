@@ -60,9 +60,10 @@ class CLRunner(NNRunner):
             # Do preprocessing
             rl_agent.preprocess(sess, readers, locations)
 
-    def train_model(self):
+    def train_model(self, cont=False):
         """
         Main method for training.
+        :param cont: fine tuning or transferred learning (default)
         :return:
         """
         with tf.Graph().as_default(), tf.Session() as sess:
@@ -75,17 +76,10 @@ class CLRunner(NNRunner):
             valid_reader = reader_class(os.path.join(cf.prep_path, "pp_valid"))
 
             # Build graph and do initialization
-            if cf.reader.split(".")[-1] == "TFReader":
-                train_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                                    name="main_graph", tfreader=train_reader)
-                valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                                    name="valid_nng", tfreader=valid_reader)
-
-            else:
-                train_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                                    name="main_graph")
-                valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                                    name="valid_nng")
+            train_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
+                                name="main_graph")
+            valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
+                                name="valid_nng")
 
             # Copy network between train and validation
             update_ops = copy_network(tf.trainable_variables())
@@ -93,10 +87,11 @@ class CLRunner(NNRunner):
             # Config trainable variables for transferring learning
             common_vars = tf.global_variables()[:2*(len(
                 cf.kernel_size) + len(cf.fc_size))]
-            train_vars = tf.trainable_variables()[:int(len(
-                tf.trainable_variables())/2)]
-            var_list = [x for x in train_vars if x not in common_vars]
-            train_nng.reset_train_step(var_list)
+            if cont == False:
+                train_vars = tf.trainable_variables()[:int(len(
+                    tf.trainable_variables())/2)]
+                var_list = [x for x in train_vars if x not in common_vars]
+                train_nng.reset_train_step(var_list)
 
             # Do initialization
             sess.run(tf.group(tf.global_variables_initializer(),
@@ -113,22 +108,11 @@ class CLRunner(NNRunner):
                 warnings.warn("Model not exist, train a new model now")
 
             # Start to train
-            if cf.reader.split(".")[-1] == "TFReader":
-                self._train_with_tfreader(sess, train_nng.get_train_step,
-                                          train_nng.get_error,
-                                          valid_nng.get_error,
-                                          update_ops)
-
-            else:
-                self._train_with_sqreader(sess, train_reader, valid_reader,
-                                          train_nng.get_train_step,
-                                          train_nng.get_error,
-                                          valid_nng.get_error,
-                                          train_nng.get_instance,
-                                          train_nng.get_label,
-                                          valid_nng.get_instance,
-                                          valid_nng.get_label,
-                                          update_ops)
+            self._train(sess, train_reader, valid_reader,
+                        train_nng.get_train_step, train_nng.get_error,
+                        valid_nng.get_error, train_nng.get_instance,
+                        train_nng.get_label, valid_nng.get_instance,
+                        valid_nng.get_label, update_ops)
 
 
 

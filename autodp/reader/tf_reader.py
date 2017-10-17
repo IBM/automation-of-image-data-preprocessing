@@ -101,7 +101,10 @@ class TFReader(BaseReader):
                 coord.join(threads)
 
         else:
-            yield (images, labels)
+            raise ValueError("Session cannot be None")
+
+
+
 
 
 

@@ -14,10 +14,10 @@ def letsgo():
     :return:
     """
     # Create the runner
-    cl_runner = CLRunner()
+    cl_runner = CLRunner(preprocess=True)
 
     # Start training
-    cl_runner.train_model()
+    cl_runner.train_model(cont=False)
 
     # Start testing
     accuracy = cl_runner.test_model(path=os.path.join(cf.prep_path, "pp_test"))

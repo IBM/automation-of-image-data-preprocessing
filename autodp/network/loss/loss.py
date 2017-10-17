@@ -4,8 +4,6 @@ Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
 import abc
 
-import tensorflow as tf
-
 
 class Loss(metaclass=abc.ABCMeta):
     """
@@ -53,6 +51,16 @@ class Loss(metaclass=abc.ABCMeta):
 #                              name="total_loss")
 
         return total_loss
+
+
+
+
+
+
+
+
+
+
 
 
 

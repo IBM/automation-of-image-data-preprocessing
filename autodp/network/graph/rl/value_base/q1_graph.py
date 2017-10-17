@@ -14,20 +14,18 @@ class Q1Graph(BaseGraph):
     This class implements a tensorflow graph for a Q-network with one value
     output in reinforcement learning.
     """
-    def __init__(self, net_arch, loss_func, name, tfreader=None):
+    def __init__(self, net_arch, loss_func, name):
         """
         Initialization of building a graph.
         :param net_arch:
         :param loss_func:
         :param name:
-        :param tfreader:
         """
-        super().__init__(net_arch, loss_func, name, tfreader)
+        super().__init__(net_arch, loss_func, name)
 
-    def _build_model(self, tfreader):
+    def _build_model(self):
         """
         Build the total graph.
-        :param tfreader: not used
         :return:
         """
         # Declare network inputs

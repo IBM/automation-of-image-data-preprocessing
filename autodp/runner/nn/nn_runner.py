@@ -2,7 +2,6 @@
 The IBM License 2017.
 Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
-import os
 import sys
 
 import tensorflow as tf
@@ -31,45 +30,7 @@ class NNRunner(BaseRunner):
         pass
 
     @staticmethod
-    def _run_train_step_with_tfreader(sess, train_op, error_op):
-        """
-        Train a batch of data.
-        :param sess:
-        :param train_op:
-        :param error_op:
-        :return: error
-        """
-        [_, err] = sess.run([train_op, error_op])
-
-        return err
-
-    @staticmethod
-    def _run_valid_step_with_tfreader(sess, error_op):
-        """
-        Validate a batch of data.
-        :param sess:
-        :param error_op:
-        :return: error
-        """
-        err = sess.run(error_op)
-
-        return err
-
-    @staticmethod
-    def _run_test_step_with_tfreader(sess, preds, ids):
-        """
-        Test a batch of data.
-        :param sess:
-        :param preds:
-        :param ids:
-        :return:
-        """
-        [p, i] = sess.run([preds, ids])
-
-        return p, i
-
-    @staticmethod
-    def _run_train_step_with_sqreader(sess, train_op, error_op, fd):
+    def _run_train_step(sess, train_op, error_op, fd):
         """
         Train a batch of data.
         :param sess:
@@ -83,7 +44,7 @@ class NNRunner(BaseRunner):
         return err
 
     @staticmethod
-    def _run_valid_step_with_sqreader(sess, error_op, fd):
+    def _run_valid_step(sess, error_op, fd):
         """
         Validate a batch of data.
         :param sess:
@@ -96,7 +57,7 @@ class NNRunner(BaseRunner):
         return err
 
     @staticmethod
-    def _run_test_step_with_sqreader(sess, preds, ids, fd):
+    def _run_test_step(sess, preds, ids, fd):
         """
         Test a batch of data.
         :param sess:
@@ -109,126 +70,9 @@ class NNRunner(BaseRunner):
 
         return p, i
 
-    def _train_with_tfreader(self, sess, train_op, train_err_op,
-                             valid_err_op, update_ops):
-        """
-        Do training with a tfreader.
-        :param sess:
-        :param train_op:
-        :param train_err_op:
-        :param valid_err_op:
-        :param update_ops:
-        :return:
-        """
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(coord=coord)
-
-        try:
-            step, err_list = 0, []
-            early_stop, best_valid = 0, sys.maxsize
-            while not coord.should_stop():
-                # Do training
-                err = self._run_train_step_with_tfreader(sess, train_op,
-                                                         train_err_op)
-                err_list.append(err)
-                step += 1
-
-                # Do validation
-                if step % cf.valid_step == 0:
-                    update_network(sess, update_ops)
-                    valid_err = self._valid_with_tfreader(sess, valid_err_op)
-
-                    if valid_err < best_valid:
-                        best_valid = valid_err
-                        early_stop = 0
-                        print("Step %d has average error: %g and reduces "
-                              "validation error: %g" % (step, np.mean(err_list),
-                                                        best_valid))
-
-                        # Save model
-                        clear_model_dir(cf.save_model + "/nn")
-                        saver = tf.train.Saver(tf.global_variables())
-                        saver.save(sess, cf.save_model + "/nn/model")
-
-                    else:
-                        print("Step %d has average error: %g" % (
-                            step, np.mean(err_list)))
-                        early_stop += 1
-
-                    err_list = []
-                    if early_stop > 3:
-                        print("Exit due to early stopping")
-                        break
-
-        except tf.errors.OutOfRangeError:
-            print("Finish training successfully")
-
-        finally:
-            coord.request_stop()
-            coord.join(threads)
-
-    def _valid_with_tfreader(self, sess, valid_err_op):
-        """
-        Do validation with a tfreader.
-        :param sess:
-        :param valid_err_op:
-        :return:
-        """
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(coord=coord)
-
-        try:
-            err_list = []
-            while not coord.should_stop():
-                err = self._run_valid_step_with_tfreader(sess, valid_err_op)
-                err_list.append(err)
-
-        except tf.errors.OutOfRangeError:
-            valid_err = np.mean(err_list)
-
-        finally:
-            coord.request_stop()
-            coord.join(threads)
-
-        return valid_err
-
-    def _test_with_tfreader(self, sess, preds, ids):
-        """
-        Do testing with a tfreader.
-        :param sess:
-        :param preds:
-        :param ids: either true labels or image ids
-        :return: accuracy (only useful if ids are true labels
-        """
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(coord=coord)
-
-        try:
-            p_list, i_list = [], []
-            while not coord.should_stop():
-                p, i = self._run_test_step_with_tfreader(sess, preds, ids)
-                p_list.extend(p)
-                i_list.extend(i)
-
-        except tf.errors.OutOfRangeError:
-            df = pd.DataFrame({"id": i_list, "label": p_list})
-            df.to_csv(cf.result_path + "/result.csv", header=True, sep=",",
-                      index=False)
-
-            tmp = np.abs(np.array(i_list) - np.array(p_list))
-            bool_tmp = [bool(t) for t in tmp]
-            accuracy = 1 - sum(bool_tmp) / float(len(i_list))
-
-        finally:
-            coord.request_stop()
-            coord.join(threads)
-
-        return accuracy
-
-    def _train_with_sqreader(self, sess, train_reader, valid_reader, train_op,
-                             train_err_op, valid_err_op, train_image_op,
-                             train_label_op, valid_image_op, valid_label_op,
-                             update_ops):
+    def _train(self, sess, train_reader, valid_reader, train_op, train_err_op,
+               valid_err_op, train_image_op, train_label_op, valid_image_op,
+               valid_label_op, update_ops):
         """
         Do training with a sqreader.
         :param sess:
@@ -246,21 +90,18 @@ class NNRunner(BaseRunner):
         """
         step, err_list = 0, []
         early_stop, best_valid = 0, sys.maxsize
-        for (images, labels) in train_reader.get_batch():
+        for (images, labels) in train_reader.get_batch(sess=sess):
             # Do training
             fd = {train_image_op: images, train_label_op: labels}
-            err = self._run_train_step_with_sqreader(sess, train_op,
-                                                     train_err_op, fd)
+            err = self._run_train_step(sess, train_op, train_err_op, fd)
             err_list.append(err)
             step += 1
 
             # Do validation
             if step % cf.valid_step == 0:
                 update_network(sess, update_ops)
-                valid_err = self._valid_with_sqreader(sess, valid_reader,
-                                                      valid_err_op,
-                                                      valid_image_op,
-                                                      valid_label_op)
+                valid_err = self._valid(sess, valid_reader, valid_err_op,
+                                        valid_image_op, valid_label_op)
 
                 if valid_err < best_valid:
                     best_valid = valid_err
@@ -284,8 +125,7 @@ class NNRunner(BaseRunner):
                     print("Exit due to early stopping")
                     break
 
-    def _valid_with_sqreader(self, sess, reader, valid_err_op,
-                             image_op, label_op):
+    def _valid(self, sess, reader, valid_err_op, image_op, label_op):
         """
         Do validation with a sqreader.
         :param sess:
@@ -296,17 +136,16 @@ class NNRunner(BaseRunner):
         :return:
         """
         err_list = []
-        for (images, labels) in reader.get_batch():
+        for (images, labels) in reader.get_batch(sess=sess):
             fd = {image_op: images, label_op: labels}
-            err = self._run_valid_step_with_sqreader(sess, valid_err_op, fd)
+            err = self._run_valid_step(sess, valid_err_op, fd)
             err_list.append(err)
 
         valid_err = np.mean(err_list)
 
         return valid_err
 
-    def _test_with_sqreader(self, sess, reader, preds, ids,
-                            image_op, label_op):
+    def _test(self, sess, reader, preds, ids, image_op, label_op):
         """
         Do testing with a sqreader.
         :param sess:
@@ -318,9 +157,9 @@ class NNRunner(BaseRunner):
         :return: accuracy (only useful if ids are true labels
         """
         p_list, i_list = [], []
-        for (images, labels) in reader.get_batch():
+        for (images, labels) in reader.get_batch(sess=sess):
             fd = {image_op: images, label_op: labels}
-            p, i = self._run_test_step_with_sqreader(sess, preds, ids, fd)
+            p, i = self._run_test_step(sess, preds, ids, fd)
             p_list.extend(p)
             i_list.extend(i)
 
@@ -349,17 +188,10 @@ class NNRunner(BaseRunner):
             valid_reader = reader_class(cf.valid_path)
 
             # Build graph and do initialization
-            if cf.reader.split(".")[-1] == "TFReader":
-                train_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                                    name="main_graph", tfreader=train_reader)
-                valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                                    name="valid_nng", tfreader=valid_reader)
-
-            else:
-                train_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                                    name="main_graph")
-                valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                                    name="valid_nng")
+            train_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
+                                name="main_graph")
+            valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
+                                name="valid_nng")
 
             # Copy network between train and validation
             update_ops = copy_network(tf.trainable_variables())
@@ -379,22 +211,11 @@ class NNRunner(BaseRunner):
                     warnings.warn("Model not exist, train a new model now")
 
             # Start to train
-            if cf.reader.split(".")[-1] == "TFReader":
-                self._train_with_tfreader(sess, train_nng.get_train_step,
-                                          train_nng.get_error,
-                                          valid_nng.get_error,
-                                          update_ops)
-
-            else:
-                self._train_with_sqreader(sess, train_reader, valid_reader,
-                                          train_nng.get_train_step,
-                                          train_nng.get_error,
-                                          valid_nng.get_error,
-                                          train_nng.get_instance,
-                                          train_nng.get_label,
-                                          valid_nng.get_instance,
-                                          valid_nng.get_label,
-                                          update_ops)
+            self._train(sess, train_reader, valid_reader,
+                        train_nng.get_train_step, train_nng.get_error,
+                        valid_nng.get_error, train_nng.get_instance,
+                        train_nng.get_label, valid_nng.get_instance,
+                        valid_nng.get_label, update_ops)
 
     def test_model(self, path=cf.test_path, fh=None):
         """
@@ -409,17 +230,10 @@ class NNRunner(BaseRunner):
             reader = reader_class(path)
 
             # Build graph and do initialization
-            if cf.reader.split(".")[-1] == "TFReader":
-                nng1 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                               name="main_graph", tfreader=reader)
-                nng2 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                               name="valid_nng", tfreader=reader)
-
-            else:
-                nng1 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                               name="main_graph")
-                nng2 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                               name="valid_nng")
+            nng1 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
+                           name="main_graph")
+            nng2 = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
+                           name="valid_nng")
 
             sess.run(tf.group(tf.global_variables_initializer(),
                               tf.local_variables_initializer()))
@@ -435,15 +249,8 @@ class NNRunner(BaseRunner):
 
             # Start to test
             pred = tf.arg_max(tf.nn.softmax(nng2.get_pred), dimension=1)
-            if cf.reader.split(".")[-1] == "TFReader":
-                accuracy = self._test_with_tfreader(sess, pred,
-                                                    nng2.get_label)
-
-            else:
-                accuracy = self._test_with_sqreader(sess, reader, pred,
-                                                    nng2.get_label,
-                                                    nng2.get_instance,
-                                                    nng2.get_label)
+            accuracy = self._test(sess, reader, pred, nng2.get_label,
+                                  nng2.get_instance, nng2.get_label)
 
         return accuracy
 
