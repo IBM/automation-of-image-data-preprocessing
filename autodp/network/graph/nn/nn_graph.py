@@ -44,6 +44,24 @@ class NNGraph(BaseGraph):
         self._pred = self._inference(self._instance)
         self._train_loss(self._pred, self._target)
 
+    def reset_train_step(self, var_list):
+        """
+        Reset train step with a new trainable variable list.
+        :param var_list:
+        :return:
+        """
+        # Create gradient steps
+        grads = tf.gradients(self._obj_func, var_list)
+        norm_grads, _ = tf.clip_by_global_norm(grads, cf.max_grad_norm)
+
+        # Define a train step
+        optimizer = tf.train.AdamOptimizer(cf.learning_rate)
+        self._train_step = optimizer.apply_gradients(zip(norm_grads, var_list))
+
+
+
+
+
 
 
 

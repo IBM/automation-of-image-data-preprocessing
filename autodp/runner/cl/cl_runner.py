@@ -19,11 +19,13 @@ class CLRunner(NNRunner):
     This class implements a way to allow to continue learning after using
     results of preprocessing.
     """
-    def __init__(self):
+    def __init__(self, preprocess=True):
         """
         Initialize by preprocessing image data.
+        :param preprocess:
         """
-        self._preprocess_data()
+        if preprocess:
+            self._preprocess_data()
 
     def _preprocess_data(self):
         """
@@ -88,14 +90,20 @@ class CLRunner(NNRunner):
             # Copy network between train and validation
             update_ops = copy_network(tf.trainable_variables())
 
+            # Config trainable variables for transferring learning
+            common_vars = tf.global_variables()[:2*(len(
+                cf.kernel_size) + len(cf.fc_size))]
+            train_vars = tf.trainable_variables()[:int(len(
+                tf.trainable_variables())/2)]
+            var_list = [x for x in train_vars if x not in common_vars]
+            train_nng.reset_train_step(var_list)
+
             # Do initialization
             sess.run(tf.group(tf.global_variables_initializer(),
                               tf.local_variables_initializer()))
 
             # Load existing model to continue training
             # Load the model
-            common_vars = tf.global_variables()[:2*(len(
-                cf.kernel_size) + len(cf.fc_size))]
             saver = tf.train.Saver(common_vars)
             ckpt = tf.train.get_checkpoint_state(cf.save_model + "/rl")
             if ckpt and ckpt.model_checkpoint_path:
@@ -121,6 +129,66 @@ class CLRunner(NNRunner):
                                           valid_nng.get_instance,
                                           valid_nng.get_label,
                                           update_ops)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

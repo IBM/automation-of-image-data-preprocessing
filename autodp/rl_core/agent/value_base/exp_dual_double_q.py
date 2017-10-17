@@ -105,7 +105,7 @@ class ExpDualDoubleQ(BaseAgent):
             image_batch.extend(images)
             env.add(image_batch=images, label_batch=labels)
 
-            while len(image_batch) > 0:
+            while len(image_batch) > 0.3*cf.batch_size:
                 # Select actions using the policy network
                 actions = sess.run(self._main_graph.get_next_action,
                     feed_dict={self._main_graph.get_instance: image_batch})
