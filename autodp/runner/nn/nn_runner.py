@@ -57,18 +57,19 @@ class NNRunner(BaseRunner):
         return err
 
     @staticmethod
-    def _run_test_step(sess, preds, ids, fd):
+    def _run_test_step(sess, pred, id, prob, fd):
         """
         Test a batch of data.
         :param sess:
-        :param preds:
-        :param ids:
+        :param pred:
+        :param id:
+        :param prob:
         :param fd:
         :return:
         """
-        [p, i] = sess.run([preds, ids], feed_dict=fd)
+        [p, i, pr] = sess.run([pred, id, prob], feed_dict=fd)
 
-        return p, i
+        return p, i, pr
 
     def _train(self, sess, train_reader, valid_reader, train_op, train_err_op,
                valid_err_op, train_image_op, train_label_op, valid_image_op,
@@ -145,25 +146,29 @@ class NNRunner(BaseRunner):
 
         return valid_err
 
-    def _test(self, sess, reader, preds, ids, image_op, label_op):
+    def _test(self, sess, reader, pred, id, image_op, label_op, prob):
         """
         Do testing with a sqreader.
         :param sess:
         :param reader:
-        :param preds:
-        :param ids: either true labels or image ids
+        :param pred:
+        :param id: either true labels or image ids
         :param image_op:
         :param label_op:
+        :param prob:
         :return: accuracy (only useful if ids are true labels
         """
-        p_list, i_list = [], []
+        p_list, i_list, pr_list = [], [], []
         for (images, labels) in reader.get_batch(sess=sess):
             fd = {image_op: images, label_op: labels}
-            p, i = self._run_test_step(sess, preds, ids, fd)
+            p, i, pr = self._run_test_step(sess, pred, id, prob, fd)
             p_list.extend(p)
             i_list.extend(i)
+            pr_list.extend(pr)
 
-        df = pd.DataFrame({"id": i_list, "label": p_list})
+        # Support kaggle output
+        df = pd.concat([pd.DataFrame({"id": i_list, "label": p_list}),
+                        pd.DataFrame(np.array(pr_list))], axis=1)
         df.to_csv(cf.result_path + "/result.csv", header=True, sep=",",
                   index=False)
 
@@ -249,8 +254,9 @@ class NNRunner(BaseRunner):
 
             # Start to test
             pred = tf.arg_max(tf.nn.softmax(nng2.get_pred), dimension=1)
+            prob = tf.nn.softmax(nng2.get_pred)
             accuracy = self._test(sess, reader, pred, nng2.get_label,
-                                  nng2.get_instance, nng2.get_label)
+                                  nng2.get_instance, nng2.get_label, prob)
 
         return accuracy
 

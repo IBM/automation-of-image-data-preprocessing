@@ -17,7 +17,7 @@ def letsgo():
     cl_runner = CLRunner(preprocess=True)
 
     # Start training
-    cl_runner.train_model(cont=False)
+    cl_runner.train_model(cont=True)
 
     # Start testing
     accuracy = cl_runner.test_model(path=os.path.join(cf.prep_path, "pp_test"))
