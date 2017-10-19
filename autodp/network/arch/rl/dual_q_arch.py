@@ -6,7 +6,7 @@ import tensorflow as tf
 
 from autodp.network.arch.base_arch import BaseArch
 from autodp.utils.tf_utils import declare_variable_weight_decay
-from autodp.config.cf_container import Config as cf
+from autodp import cf
 
 
 @BaseArch.register

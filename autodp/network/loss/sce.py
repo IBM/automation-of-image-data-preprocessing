@@ -5,7 +5,7 @@ Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 import tensorflow as tf
 
 from autodp.network.loss.loss import Loss
-from autodp.config.cf_container import Config as cf
+from autodp import cf
 
 
 @Loss.register

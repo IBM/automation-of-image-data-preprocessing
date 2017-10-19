@@ -12,7 +12,7 @@ import pandas as pd
 from autodp.runner.base_runner import BaseRunner
 from autodp.utils.misc import clear_model_dir
 from autodp.network.graph.nn.nn_graph import NNGraph
-from autodp.config.cf_container import Config as cf
+from autodp import cf
 from autodp.utils.misc import get_class
 from autodp.utils.tf_utils import copy_network
 from autodp.utils.tf_utils import update_network
@@ -73,7 +73,7 @@ class NNRunner(BaseRunner):
 
     def _train(self, sess, train_reader, valid_reader, train_op, train_err_op,
                valid_err_op, train_image_op, train_label_op, valid_image_op,
-               valid_label_op, update_ops):
+               valid_label_op, update_ops, verbose):
         """
         Do training with a sqreader.
         :param sess:
@@ -87,6 +87,7 @@ class NNRunner(BaseRunner):
         :param valid_image_op:
         :param valid_label_op:
         :param update_ops:
+        :param verbose:
         :return:
         """
         step, err_list = 0, []
@@ -107,24 +108,28 @@ class NNRunner(BaseRunner):
                 if valid_err < best_valid:
                     best_valid = valid_err
                     early_stop = 0
-                    print("Step %d has average error: %g and reduces "
-                          "validation error: %g" % (step, np.mean(err_list),
-                                                    best_valid))
+                    if verbose:
+                        print("Step %d has average error: %g and reduces "
+                              "validation error: %g" % (step, np.mean(err_list),
+                                                        best_valid))
 
-                    # Save model
-                    clear_model_dir(cf.save_model + "/nn")
-                    saver = tf.train.Saver(tf.global_variables())
-                    saver.save(sess, cf.save_model + "/nn/model")
+                        # Save model
+                        clear_model_dir(cf.save_model + "/nn")
+                        saver = tf.train.Saver(tf.global_variables())
+                        saver.save(sess, cf.save_model + "/nn/model")
 
                 else:
-                    print("Step %d has average error: %g" % (
-                        step, np.mean(err_list)))
+                    if verbose:
+                        print("Step %d has average error: %g" % (
+                            step, np.mean(err_list)))
                     early_stop += 1
 
                 err_list = []
                 if early_stop > 3:
                     print("Exit due to early stopping")
                     break
+
+        return best_valid
 
     def _valid(self, sess, reader, valid_err_op, image_op, label_op):
         """
@@ -178,10 +183,11 @@ class NNRunner(BaseRunner):
 
         return accuracy
 
-    def train_model(self, cont=False):
+    def train_model(self, cont=False, verbose=True):
         """
         Main method for training.
         :param cont: new training or continue with current training
+        :param verbose:
         :return:
         """
         with tf.Graph().as_default(), tf.Session() as sess:
@@ -216,11 +222,17 @@ class NNRunner(BaseRunner):
                     warnings.warn("Model not exist, train a new model now")
 
             # Start to train
-            self._train(sess, train_reader, valid_reader,
-                        train_nng.get_train_step, train_nng.get_error,
-                        valid_nng.get_error, train_nng.get_instance,
-                        train_nng.get_label, valid_nng.get_instance,
-                        valid_nng.get_label, update_ops)
+            best_valid = self._train(sess, train_reader, valid_reader,
+                                     train_nng.get_train_step,
+                                     train_nng.get_error,
+                                     valid_nng.get_error,
+                                     train_nng.get_instance,
+                                     train_nng.get_label,
+                                     valid_nng.get_instance,
+                                     valid_nng.get_label,
+                                     update_ops, verbose)
+
+        return best_valid
 
     def test_model(self, path=cf.test_path, fh=None):
         """

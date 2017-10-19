@@ -6,7 +6,7 @@ import abc
 
 import tensorflow as tf
 
-from autodp.config.cf_container import Config as cf
+from autodp import cf
 from autodp.utils.misc import get_class
 
 

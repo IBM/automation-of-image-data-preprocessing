@@ -5,7 +5,7 @@ Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 import tensorflow as tf
 
 from autodp.network.graph.base_graph import BaseGraph
-from autodp.config.cf_container import Config as cf
+from autodp import cf
 
 
 @BaseGraph.register

@@ -9,7 +9,7 @@ import pandas as pd
 
 from autodp.runner.base_runner import BaseRunner
 from autodp.utils.misc import get_class
-from autodp.config.cf_container import Config as cf
+from autodp import cf
 
 
 @BaseRunner.register
@@ -23,10 +23,11 @@ class RLRunner(BaseRunner):
         """
         pass
 
-    def train_model(self, cont=False):
+    def train_model(self, cont=False, verbose=True):
         """
         Main method for training rl policy.
         :param cont:
+        :param verbose:
         :return:
         """
         with tf.Graph().as_default(), tf.Session() as sess:
@@ -60,7 +61,10 @@ class RLRunner(BaseRunner):
                 rl_agent.load_specific_objects()
 
             # Training
-            rl_agent.train_policy(sess, train_reader, valid_reader)
+            best_valid = rl_agent.train_policy(sess, train_reader,
+                                               valid_reader, verbose)
+
+        return best_valid
 
     def test_model(self, path=cf.test_path, fh=None):
         """

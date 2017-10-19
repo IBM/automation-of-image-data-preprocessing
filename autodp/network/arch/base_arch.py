@@ -7,7 +7,7 @@ import tensorflow as tf
 
 from autodp.utils.tf_utils import declare_variable_weight_decay
 from autodp.utils.tf_utils import declare_variable
-from autodp.config.cf_container import Config as cf
+from autodp import cf
 from autodp.utils.tf_utils import relu
 
 

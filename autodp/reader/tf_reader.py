@@ -7,7 +7,7 @@ import os
 import tensorflow as tf
 
 from autodp.reader.base_reader import BaseReader
-from autodp.config.cf_container import Config as cf
+from autodp import cf
 
 
 @BaseReader.register

@@ -9,7 +9,7 @@ import pickle
 import numpy as np
 
 from autodp.reader.base_reader import BaseReader
-from autodp.config.cf_container import Config as cf
+from autodp import cf
 
 
 @BaseReader.register

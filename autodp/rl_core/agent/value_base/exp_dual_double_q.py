@@ -12,7 +12,7 @@ import warnings
 import bz2
 
 from autodp.rl_core.agent.base_agent import BaseAgent
-from autodp.config.cf_container import Config as cf
+from autodp import cf
 from autodp.utils.misc import get_class
 from autodp.rl_core.env.batch_env import BatchSimEnv
 from autodp.utils.misc import clear_model_dir
@@ -71,12 +71,13 @@ class ExpDualDoubleQ(BaseAgent):
         """
         to_pickle(cf.save_model + "/rl/exp_buf.pkl", self._exp_buf)
 
-    def train_policy(self, sess, train_reader, valid_reader):
+    def train_policy(self, sess, train_reader, valid_reader, verbose):
         """
         Policy improvement and evaluation.
         :param sess:
         :param train_reader:
         :param valid_reader:
+        :param verbose:
         :return:
         """
         # Copy between the 2 graphs
@@ -168,25 +169,31 @@ class ExpDualDoubleQ(BaseAgent):
                         best_valid = valid_reward
                         early_stop = 0
 
-                        # Save model
-                        clear_model_dir(cf.save_model + "/rl")
-                        saver = tf.train.Saver(tf.global_variables())
-                        saver.save(sess, cf.save_model + "/rl/model")
+                        if verbose:
+                            # Save model
+                            clear_model_dir(cf.save_model + "/rl")
+                            saver = tf.train.Saver(tf.global_variables())
+                            saver.save(sess, cf.save_model + "/rl/model")
 
-                        # Save specific objects
-                        self.save_specific_objects()
+                            # Save specific objects
+                            self.save_specific_objects()
 
                     else:
                         early_stop += 1
 
-                    print("Step %d accumulated %g rewards, processed %d images,"
-                          " train error %g and valid rewards %g" % (num_step,
-                        reward_all, done_all, np.mean(err_list), best_valid))
+                    if verbose:
+                        print("Step %d accumulated %g rewards, processed %d "
+                              "images, train error %g and valid rewards %g" % (
+                            num_step, reward_all, done_all,
+                            np.mean(err_list), best_valid))
+
                     err_list = []
 
                     if early_stop >= 30:
                         print("Exit due to early stopping")
-                        return
+                        return -best_valid
+
+        return -best_valid
 
     def predict(self, sess, reader, fh=None):
         """

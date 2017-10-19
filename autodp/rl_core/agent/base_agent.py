@@ -10,7 +10,7 @@ from PIL import Image
 import numpy as np
 import pickle
 
-from autodp.config.cf_container import Config as cf
+from autodp import cf
 from autodp.utils.tf_utils import wrap_image
 
 

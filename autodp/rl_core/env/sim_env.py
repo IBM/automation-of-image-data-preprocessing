@@ -4,7 +4,7 @@ Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
 import numpy as np
 
-from autodp.config.cf_container import Config as cf
+from autodp import cf
 from autodp.rl_core.env.action.simple_action import SimpleAction
 
 

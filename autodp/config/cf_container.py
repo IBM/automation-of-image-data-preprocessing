@@ -4,62 +4,82 @@ Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
 import ast
 from autodp.config.cf_parser import config_parser
+from autodp.config.cf_parser import PATH_TO_CONFIG_FILE
 
 
 class Config(object):
     """
     This is a container for configured parameters.
     """
-    # Load general parameters
-    train_path = config_parser.get("general_param", "train_path")
-    valid_path = config_parser.get("general_param", "valid_path")
-    test_path = config_parser.get("general_param", "test_path")
-    prep_path = config_parser.get("general_param", "prep_path")
-    result_path = config_parser.get("general_param", "result_path")
-    save_model = config_parser.get("general_param", "save_model")
-    ima_height = int(config_parser.get("general_param", "ima_height"))
-    ima_width = int(config_parser.get("general_param", "ima_width"))
-    ima_depth = int(config_parser.get("general_param", "ima_depth"))
-    num_class = int(config_parser.get("general_param", "num_class"))
-    num_epoch = int(config_parser.get("general_param", "num_epoch"))
-    batch_size = int(config_parser.get("general_param", "batch_size"))
-    max_grad_norm = float(config_parser.get("general_param", "max_grad_norm"))
-    valid_step = int(config_parser.get("general_param", "valid_step"))
-    reader = config_parser.get("general_param", "reader")
+    def __init__(self):
+        # Load general parameters
+        self.train_path = config_parser.get("general_param", "train_path")
+        self.valid_path = config_parser.get("general_param", "valid_path")
+        self.test_path = config_parser.get("general_param", "test_path")
+        self.prep_path = config_parser.get("general_param", "prep_path")
+        self.result_path = config_parser.get("general_param", "result_path")
+        self.save_model = config_parser.get("general_param", "save_model")
+        self.ima_height = int(config_parser.get("general_param", "ima_height"))
+        self.ima_width = int(config_parser.get("general_param", "ima_width"))
+        self.ima_depth = int(config_parser.get("general_param", "ima_depth"))
+        self.num_class = int(config_parser.get("general_param", "num_class"))
+        self.num_epoch = int(config_parser.get("general_param", "num_epoch"))
+        self.batch_size = int(config_parser.get("general_param", "batch_size"))
+        self.max_grad_norm = float(config_parser.get("general_param",
+                                                     "max_grad_norm"))
+        self.valid_step = int(config_parser.get("general_param", "valid_step"))
+        self.reader = config_parser.get("general_param", "reader")
 
-    # Trainable via hypertuning
-    learning_rate = float(config_parser.get("general_param", "learning_rate"))
-    reg_coef = float(config_parser.get("general_param", "reg_coef"))
-    kernel_size = ast.literal_eval(config_parser.get("general_param",
-                                                     "kernel_size"))
-    kernel_stride = ast.literal_eval(config_parser.get("general_param",
-                                                     "kernel_stride"))
-    pool_size = ast.literal_eval(config_parser.get("general_param",
-                                                     "pool_size"))
-    pool_stride = ast.literal_eval(config_parser.get("general_param",
-                                                     "pool_stride"))
-    fc_size = ast.literal_eval(config_parser.get("general_param",
-                                                 "fc_size"))
+        # Trainable via hypertuning
+        self.learning_rate = float(config_parser.get("general_param",
+                                                     "learning_rate"))
+        self.reg_coef = float(config_parser.get("general_param", "reg_coef"))
+        self.kernel_size = ast.literal_eval(config_parser.get("general_param",
+                                                              "kernel_size"))
+        self.kernel_stride = ast.literal_eval(config_parser.get("general_param",
+                                                                "kernel_stride"))
+        self.pool_size = ast.literal_eval(config_parser.get("general_param",
+                                                            "pool_size"))
+        self.pool_stride = ast.literal_eval(config_parser.get("general_param",
+                                                              "pool_stride"))
+        self.fc_size = ast.literal_eval(config_parser.get("general_param",
+                                                          "fc_size"))
 
-    # Load neural network parameters
-    nn_arch = config_parser.get("nn_param", "nn_arch")
-    nn_loss = config_parser.get("nn_param", "nn_loss")
+        # Load neural network parameters
+        self.nn_arch = config_parser.get("nn_param", "nn_arch")
+        self.nn_loss = config_parser.get("nn_param", "nn_loss")
 
-    # Load reinforcement learning parameters
-    rl_arch = config_parser.get("rl_param", "rl_arch")
-    rl_loss = config_parser.get("rl_param", "rl_loss")
-    rl_graph = config_parser.get("rl_param", "rl_graph")
-    rl_agent = config_parser.get("rl_param", "rl_agent")
-    num_action = int(config_parser.get("rl_param", "num_action"))
-    max_explore = float(config_parser.get("rl_param", "max_explore"))
-    buf_size = int(config_parser.get("rl_param", "buf_size"))
+        # Load reinforcement learning parameters
+        self.rl_arch = config_parser.get("rl_param", "rl_arch")
+        self.rl_loss = config_parser.get("rl_param", "rl_loss")
+        self.rl_graph = config_parser.get("rl_param", "rl_graph")
+        self.rl_agent = config_parser.get("rl_param", "rl_agent")
+        self.num_action = int(config_parser.get("rl_param", "num_action"))
+        self.max_explore = float(config_parser.get("rl_param", "max_explore"))
+        self.buf_size = int(config_parser.get("rl_param", "buf_size"))
 
-    # Trainable via hypertuning
-    min_explore = float(config_parser.get("rl_param", "min_explore"))
-    anneal_step = float(config_parser.get("rl_param", "anneal_step"))
-    gamma = float(config_parser.get("rl_param", "gamma"))
-    max_age = int(config_parser.get("rl_param", "max_age"))
-    dbl_coef = float(config_parser.get("rl_param", "dbl_coef"))
+        # Trainable via hypertuning
+        self.min_explore = float(config_parser.get("rl_param", "min_explore"))
+        self.anneal_step = float(config_parser.get("rl_param", "anneal_step"))
+        self.gamma = float(config_parser.get("rl_param", "gamma"))
+        self.max_age = int(config_parser.get("rl_param", "max_age"))
+        self.dbl_coef = float(config_parser.get("rl_param", "dbl_coef"))
+
+    def reset_config(self, path=PATH_TO_CONFIG_FILE):
+        """
+        Overwrite system config by application config.
+        :param path:
+        :return:
+        """
+        config_parser.clear()
+        config_parser.read(path)
+        self.__init__()
+
+
+
+
+
+
 
 
 

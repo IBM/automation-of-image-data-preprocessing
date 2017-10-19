@@ -9,7 +9,7 @@ import warnings
 
 from autodp.runner.nn.nn_runner import NNRunner
 from autodp.utils.misc import get_class
-from autodp.config.cf_container import Config as cf
+from autodp import cf
 from autodp.network.graph.nn.nn_graph import NNGraph
 from autodp.utils.tf_utils import copy_network
 
@@ -60,10 +60,11 @@ class CLRunner(NNRunner):
             # Do preprocessing
             rl_agent.preprocess(sess, readers, locations)
 
-    def train_model(self, cont=False):
+    def train_model(self, cont=False, verbose=True):
         """
         Main method for training.
         :param cont: fine tuning or transferred learning (default)
+        :param verbose:
         :return:
         """
         with tf.Graph().as_default(), tf.Session() as sess:
@@ -108,11 +109,17 @@ class CLRunner(NNRunner):
                 warnings.warn("Model not exist, train a new model now")
 
             # Start to train
-            self._train(sess, train_reader, valid_reader,
-                        train_nng.get_train_step, train_nng.get_error,
-                        valid_nng.get_error, train_nng.get_instance,
-                        train_nng.get_label, valid_nng.get_instance,
-                        valid_nng.get_label, update_ops)
+            best_valid = self._train(sess, train_reader, valid_reader,
+                                     train_nng.get_train_step,
+                                     train_nng.get_error,
+                                     valid_nng.get_error,
+                                     train_nng.get_instance,
+                                     train_nng.get_label,
+                                     valid_nng.get_instance,
+                                     valid_nng.get_label,
+                                     update_ops, verbose)
+
+        return best_valid
 
 
 

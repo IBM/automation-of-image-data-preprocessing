@@ -6,7 +6,7 @@ import numpy as np
 import cv2 as cv
 
 from autodp.rl_core.env.action.base_action import BaseAction
-from autodp.config.cf_container import Config as cf
+from autodp import cf
 
 
 @BaseAction.register
