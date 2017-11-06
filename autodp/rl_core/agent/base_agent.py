@@ -72,7 +72,7 @@ class BaseAgent(metaclass=abc.ABCMeta):
         trues = env.get_labels()
         paths = env.get_paths()
         for (i, path) in enumerate(paths):
-            if path[-1][1] < cf.num_class:
+            if path[-1][4]:
                 idx += 1
 
                 # Compute label strength
@@ -154,12 +154,13 @@ class BaseAgent(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def train_policy(self, sess, train_reader, valid_reader):
+    def train_policy(self, sess, train_reader, valid_reader, verbose):
         """
         Policy improvement and evaluation.
         :param sess:
         :param train_reader:
         :param valid_reader:
+        :param verbose:
         :return:
         """
 

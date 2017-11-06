@@ -66,7 +66,7 @@ class TFReader(BaseReader):
             num_threads=3, batch_size=batch_size, min_after_dequeue=100,
             capacity=100+3*cf.batch_size, allow_smaller_final_batch=True)
 
-        return images, labels
+        return images, labels, file_queue
 
     def get_batch(self, batch_size=cf.batch_size, sess=None):
         """
@@ -77,7 +77,7 @@ class TFReader(BaseReader):
         :return:
         """
         # Get tensorflow records
-        images, labels = self._read_input(batch_size)
+        images, labels, queue = self._read_input(batch_size)
 
         # Return tensorflow records if sess is not passed else normal records
         if sess is not None:
@@ -97,6 +97,7 @@ class TFReader(BaseReader):
                 pass
 
             finally:
+                queue.close(cancel_pending_enqueues=True)
                 coord.request_stop()
                 coord.join(threads)
 

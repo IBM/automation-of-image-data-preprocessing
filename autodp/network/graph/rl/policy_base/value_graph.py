@@ -32,29 +32,46 @@ class ValueGraph(BaseGraph):
         self._instance = tf.placeholder(dtype=tf.float32,
                                         shape=[None, cf.ima_height,
                                                cf.ima_width, cf.ima_depth])
-        self._action = tf.placeholder(tf.int32, shape=[None])
         self._target = tf.placeholder(tf.float32, shape=[None])
 
         # Build network architecture
-        (qout, _, _) = self._inference(self._instance)
-        self._action_probs = tf.squeeze(tf.nn.softmax(qout))
-        self._action_prob = tf.gather(self._action_probs, self._action)
+        self._value = self._inference(self._instance)
 
         # Loss and train op
-        self._train_loss(self._action_prob, self._target)
+        self._train_loss(self._value, self._target)
 
     @property
-    def get_action_probs(self):
+    def get_value(self):
         """
-        Get probability of all actions.
+        Get value of a state.
         :return:
         """
-        return self._action_probs
+        return self._value
 
-    @property
-    def get_action_prob(self):
-        """
-        Get probability of the current action.
-        :return:
-        """
-        return self._action_prob
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
