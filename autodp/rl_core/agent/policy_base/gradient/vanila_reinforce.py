@@ -34,7 +34,7 @@ class VanilaReinforce(BaseAgent):
         :return:
         """
         # Loss function must be the advantage log loss
-        if cf.rl_loss != "autodp.network.loss.adv_log.AdvLoss":
+        if cf.rl_loss != "autodp.network.loss.adv_log.AdvLog":
             raise ValueError("Policy gradient methods must be used with"
                              "the advantage log loss")
 
@@ -103,18 +103,14 @@ class VanilaReinforce(BaseAgent):
                             # The return after this timestep
                             sum_return = sum(cf.gamma ** i * ex[3] for i, ex in
                                              enumerate(path[t: ]))
-                            # Update our value estimator
-                            #estimator_value.update(transition.state, total_return)
-                            # Calculate baseline/advantage
-                            #baseline_value = estimator_value.predict(transition.state)
-                            #advantage = total_return - baseline_value
+
                             # Update our policy estimator
                             [_, err] = sess.run(
                                 [self._main_graph.get_train_step,
                                  self._main_graph.get_error], feed_dict={
-                                    self._main_graph.get_instance: p[0],
-                                    self._main_graph.get_current_action: p[1],
-                                    self._main_graph.get_label: sum_return})
+                                    self._main_graph.get_instance: np.asarray([p[0]]),
+                                    self._main_graph.get_current_action: np.asarray([p[1]]),
+                                    self._main_graph.get_label: np.asarray([sum_return])})
                             err_list.append(err)
 
                 # Update input data after 1 step

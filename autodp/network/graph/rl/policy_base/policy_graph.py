@@ -61,6 +61,24 @@ class PolicyGraph(BaseGraph):
         """
         return self._action_prob
 
+    @property
+    def get_current_action(self):
+        """
+        Get the current evaluated action.
+        :return:
+        """
+        return self._action
+
+
+
+
+
+
+
+
+
+
+
 
 
 

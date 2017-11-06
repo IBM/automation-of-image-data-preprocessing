@@ -42,7 +42,12 @@ class ValueArch(BaseArch):
                                     initializer=self._conv_init)
             final_output = tf.nn.bias_add(tf.matmul(common_layer, weight), bias)
 
-        return final_output
+        return tf.reshape(final_output, [-1])
+
+
+
+
+
 
 
 
