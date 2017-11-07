@@ -129,6 +129,20 @@ class BaseAgent(metaclass=abc.ABCMeta):
                 line = {"i": image, "l": label}
                 pickle.dump(line, fh, pickle.HIGHEST_PROTOCOL)
 
+    @staticmethod
+    def _get_current_step(env):
+        """
+        Get examples from the latest step in the batch.
+        :param env:
+        :return:
+        """
+        extra = []
+        paths = env.get_paths()
+        for path in paths:
+            extra.append(path[-1])
+
+        return extra
+
     @abc.abstractmethod
     def _setup_policy(self):
         """

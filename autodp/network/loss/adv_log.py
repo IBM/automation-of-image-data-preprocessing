@@ -27,9 +27,15 @@ class AdvLog(Loss):
         :param weights: not used
         :return:
         """
-        loss = -tf.log(self._preds) * self._trues
+        loss = tf.reduce_sum(-tf.log(self._preds) * self._trues)
 
         return loss
+
+
+
+
+
+
 
 
 
