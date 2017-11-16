@@ -28,8 +28,7 @@ def format_labels(image_labels):
     label_values = list(set(image_labels.values()))
     label_values.sort()
     condensed_image_labels = dict([(image_id, label_values.index(label))
-                                   for image_id, label in
-                                   image_labels.iteritems()])
+                                   for image_id, label in image_labels.items()])
     new_id_to_original_id_map = dict(
         [[label_values.index(label), label] for label in label_values])
 
@@ -103,7 +102,7 @@ def load_part_annotations(dataset_path=''):
     parts = {}
     for image_id, parts_dict in parts_d.items():
         keys = parts_dict.keys()
-        keys.sort()
+        #keys.sort()
         parts_list = []
         for part_id in keys:
             parts_list += parts_dict[part_id]
@@ -354,7 +353,7 @@ def preprocess():
     # you only need to do this once. scipy is required for this method.
     # Alternatively, you can create this file yourself.
     # Each line of the file should have <image_id> <width> <height>
-    create_image_sizes_file(cub_dataset_dir, cub_image_dir)
+    #create_image_sizes_file(cub_dataset_dir, cub_image_dir)
 
     # Now we can create the datasets
     train, test = format_dataset(cub_dataset_dir, cub_image_dir)
