@@ -65,8 +65,10 @@ class BaseGraph(metaclass=abc.ABCMeta):
         norm_grads, _ = tf.clip_by_global_norm(grads, cf.max_grad_norm)
 
         # Define a train step
-        optimizer = tf.train.AdamOptimizer(cf.learning_rate)
-        train_step = optimizer.apply_gradients(zip(norm_grads, tvars))
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        with tf.control_dependencies(update_ops):
+            optimizer = tf.train.AdamOptimizer(cf.learning_rate)
+            train_step = optimizer.apply_gradients(zip(norm_grads, tvars))
 
         return train_step
 

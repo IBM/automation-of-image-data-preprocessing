@@ -28,7 +28,7 @@ class SCE(Loss):
         :return:
         """
         onehot_labels = tf.one_hot(self._trues, depth=cf.num_class, axis=-1)
-        loss = tf.contrib.losses.softmax_cross_entropy(logits=self._preds,
+        loss = tf.losses.softmax_cross_entropy(logits=self._preds,
             onehot_labels=onehot_labels, weights=weights)
 
         return loss

@@ -8,7 +8,6 @@ import numpy as np
 from autodp.network.arch.base_arch import BaseArch
 from autodp.utils.tf_utils import declare_variable_weight_decay
 from autodp.utils.tf_utils import declare_variable
-from autodp.utils.tf_utils import batch_norm
 from autodp import cf
 
 
@@ -65,10 +64,10 @@ class CMCArch(BaseArch):
 
         # Build block 1
         # Layer 1
-        bool_masks = [np.reshape([[mask1] * cf.ima_depth] * 192, [7, 7, cf.ima_depth, 192]),
-                      np.reshape([[mask3] * cf.ima_depth] * 192, [7, 7, cf.ima_depth, 192]),
-                      np.reshape([[mask5] * cf.ima_depth] * 192, [7, 7, cf.ima_depth, 192]),
-                      np.reshape([[mask7] * cf.ima_depth] * 192, [7, 7, cf.ima_depth, 192])]
+        bool_masks = [np.reshape([[mask1]*cf.ima_depth]*192,[7,7,cf.ima_depth,192]),
+                      np.reshape([[mask3]*cf.ima_depth]*192,[7,7,cf.ima_depth,192]),
+                      np.reshape([[mask5]*cf.ima_depth]*192,[7,7,cf.ima_depth,192]),
+                      np.reshape([[mask7]*cf.ima_depth]*192,[7,7,cf.ima_depth,192])]
         layer1 = self._build_multi_conv_layer(layer_input=self._instance,
                                               kernel_size=[7, 7, cf.ima_depth, 192],
                                               kernel_stride=[1, 1, 1, 1],
@@ -183,8 +182,8 @@ class CMCArch(BaseArch):
                 bias = declare_variable(name="bias_{}".format(i),
                                         shape=[kernel_size[-1]],
                                         initializer=self._conv_init)
-                norm.append(tf.layers.batch_normalization(tf.nn.bias_add(conv, bias),
-                                                          training=self._phase_train))
+                norm.append(tf.layers.batch_normalization(tf.nn.bias_add(
+                    conv, bias), training=self._phase_train))
 
             layer_output = tf.reduce_max(tf.stack(norm), axis=0)
 
