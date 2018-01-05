@@ -28,9 +28,15 @@ class NNGraph(BaseGraph):
         :return:
         """
         # The tensor inputs are defined
-        self._instance = tf.placeholder(dtype=tf.float32,
-            shape=[None, cf.ima_height, cf.ima_width, cf.ima_depth])
+        if cf.transfer:
+            self._instance = tf.placeholder(dtype=tf.float32,
+                                            shape=[None, 1024])
+        else:
+            self._instance = tf.placeholder(dtype=tf.float32,
+                shape=[None, cf.ima_height, cf.ima_width, cf.ima_depth])
         self._target = tf.placeholder(tf.int32, shape=[None])
+        self._phase_train = tf.placeholder_with_default(False, shape=())
+        self._keep_prob = tf.placeholder_with_default(1.0, shape=())
 
         # Define network architecture, objective function and train operator
         self._pred = self._inference(self._instance)

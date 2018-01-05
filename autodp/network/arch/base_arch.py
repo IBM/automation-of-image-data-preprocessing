@@ -15,13 +15,18 @@ class BaseArch(metaclass=abc.ABCMeta):
     """
     A base class to build a concrete architecture.
     """
-    def __init__(self, instance, name):
+    def __init__(self, instance, phase_train, keep_prob, name):
         """
         Initialize by storing the input instance.
         :param instance:
+        :param phase_train:
+        :param keep_prob:
+        :param name:
         """
         self._instance = instance
         self._name = name
+        self._phase_train = phase_train
+        self._keep_prob = keep_prob
         self._conv_init = tf.truncated_normal_initializer(stddev=0.1)
         self._xavi_init = tf.contrib.layers.xavier_initializer()
 
@@ -73,20 +78,22 @@ class BaseArch(metaclass=abc.ABCMeta):
         packages.
         :return:
         """
-        # Build convolutional layers
         l_input = tf.cast(self._instance, tf.float32)
-        for i in range(len(cf.kernel_size)):
-            l_input = self._build_conv_layer(layer_input=l_input,
-                                             kernel_size=cf.kernel_size[i],
-                                             kernel_stride=cf.kernel_stride[i],
-                                             pool_size=cf.pool_size[i],
-                                             pool_stride=cf.pool_stride[i],
-                                             layer_name="conv{}".format(i))
+
+        # Build convolutional layers
+        if len(self._instance.get_shape().as_list()) > 2:
+            for i in range(len(cf.kernel_size)):
+                l_input = self._build_conv_layer(layer_input=l_input,
+                                                 kernel_size=cf.kernel_size[i],
+                                                 kernel_stride=cf.kernel_stride[i],
+                                                 pool_size=cf.pool_size[i],
+                                                 pool_stride=cf.pool_stride[i],
+                                                 layer_name="conv{}".format(i))
+            shape = l_input.get_shape().as_list()
+            dim = shape[1] * shape[2] * shape[3]
+            l_input = tf.reshape(l_input, [-1, dim])
 
         # Build fully connected layers
-        shape = l_input.get_shape().as_list()
-        dim = shape[1] * shape[2] * shape[3]
-        l_input = tf.reshape(l_input, [-1, dim])
         for i in range(len(cf.fc_size)):
             l_input = self._build_fully_connected_layer(layer_input=l_input,
                 fc_size=cf.fc_size[i], layer_name="fc{}".format(i))

@@ -39,17 +39,18 @@ import pickle
 import bz2
 import random
 import tensorflow as tf
+import cv2 as cv
 
 from autodp.utils.tf_utils import bytes_feature
 from autodp.utils.tf_utils import int64_feature
 
 
 # Processing parameters
-SIZE = 50    # for ImageNet models compatibility
+SIZE = 200    # for ImageNet models compatibility
 TEST_DIR = "../storage/inputs/dogcat/origin/test/"
 TRAIN_DIR = "../storage/inputs/dogcat/origin/train/"
 BASE_DIR = "../storage/inputs/dogcat/"
-NUM_CHANNELS = 1
+NUM_CHANNELS = 3
 
 
 def natural_key(string_):
@@ -128,13 +129,149 @@ def prep_images(paths, out_file, bool_train):
 
         img = Image.open(path)
         img_nrm = norm_image(img)
-        img_res = resize_image(img_nrm, SIZE).convert('L')
+        img_res = resize_image(img_nrm, SIZE) #.convert('L')
 
-        line = {"i": np.reshape(img_res, [SIZE, SIZE, 1]),
+        line = {"i": np.reshape(img_res, [SIZE, SIZE, NUM_CHANNELS]),
                 "l": np.int32(label)}
         pickle.dump(line, writer, pickle.HIGHEST_PROTOCOL)
 
     writer.close()
+
+
+def dist_images(paths, out_file, bool_train):
+    """
+    Preprocess images. Reads images in paths, and writes to out_dir.
+    """
+    writer = bz2.BZ2File(out_file, "wb")
+    for count, path in enumerate(paths):
+        if path.split(sep="/")[-1].split(sep=".")[0] == "cat":
+            label = 0
+        elif path.split(sep="/")[-1].split(sep=".")[0] == "dog":
+            label = 1
+        else:
+            label = path.split(sep="/")[-1].split(sep=".")[0]
+            if bool_train: raise ValueError("Wrong files !!!")
+
+        img = process_img(np.array(Image.open(path)))
+        img_nrm = norm_image(Image.fromarray(img))
+        img_res = resize_image(img_nrm, SIZE) #.convert('L')
+
+        line = {"i": np.reshape(img_res, [SIZE, SIZE, NUM_CHANNELS]),
+                "l": np.int32(label)}
+        pickle.dump(line, writer, pickle.HIGHEST_PROTOCOL)
+
+    writer.close()
+
+
+def process_img(img):
+    # Process each image
+    time = 0
+    while (True):
+        time += 1
+        action = np.random.randint(0, 11)
+
+        if action == 0:
+            img = flip(img, -1)
+
+        elif action == 1:
+            img = flip(img, 0)
+
+        elif action == 2:
+            img = flip(img, 1)
+
+        elif action == 3:
+            img = rotate(img, 1)
+
+        elif action == 4:
+            img = rotate(img, 2)
+
+        elif action == 5:
+            img = rotate(img, 4)
+
+        elif action == 6:
+            img = rotate(img, 8)
+
+        elif action == 7:
+            img = rotate(img, -1)
+
+        elif action == 8:
+            img = rotate(img, -2)
+
+        elif action == 9:
+            img = rotate(img, -4)
+
+        elif action == 10:
+            img = rotate(img, -8)
+
+        if np.random.rand() <= 0.5 or time == 5: break
+
+    return img
+
+
+def flip(img, flip_code):
+    """
+    Flip action.
+    :param flip_code:
+    :return:
+    """
+    state = cv.flip(img, flip_code)
+
+    return state
+
+
+def crop(img, ratio):
+    """
+    Crop action.
+    :param ratio:
+    :return:
+    """
+    crop_size0 = int(img.shape[0] * ratio)
+    crop_size1 = int(img.shape[1] * ratio)
+    d0 = int((img.shape[0] - crop_size0) / 2)
+    d1 = int((img.shape[1] - crop_size1) / 2)
+
+    crop_im = img[d0: d0 + crop_size0, d1: d1 + crop_size1, :]
+    state = np.zeros(img.shape)
+    state[d0: d0 + crop_size0, d1: d1 + crop_size1, :] = crop_im
+
+    return state
+
+
+def scale(img, ratio):
+    """
+    Scale action.
+    :param ratio:
+    :return:
+    """
+    height, width = img.shape[:2]
+    res_im = cv.resize(img, (int(width * ratio), int(height * ratio)),
+                       interpolation=cv.INTER_CUBIC)
+
+    if ratio > 1:
+        d0 = int((res_im.shape[0] - height) / 2)
+        d1 = int((res_im.shape[1] - width) / 2)
+        state = res_im[d0: d0 + height, d1: d1 + width, :]
+
+    elif ratio < 1:
+        d0 = int((height - res_im.shape[0]) / 2)
+        d1 = int((width - res_im.shape[1]) / 2)
+        state = np.zeros(img.shape)
+        state[d0:d0 + res_im.shape[0], d1:d1 + res_im.shape[1], :] = res_im
+
+    return state
+
+
+def rotate(img, degree):
+    """
+    Rotate action.
+    :param degree:
+    :return:
+    """
+    rows, cols = img.shape[:2]
+    matrix = cv.getRotationMatrix2D((cols / 2, rows / 2), degree, 1)
+    state = cv.warpAffine(img, matrix, (cols, rows))
+
+    return state
 
 
 def main():
@@ -149,8 +286,8 @@ def main():
     random.shuffle(train_cats)
     random.shuffle(train_dogs)
 
-    train_all = train_cats[:10000] + train_dogs[:10000]
-    valid_all = train_cats[10000:] + train_dogs[10000:]
+    train_all = train_cats[:12000] + train_dogs[:12000]
+    valid_all = train_cats[12000:] + train_dogs[12000:]
     random.shuffle(train_all)
     random.shuffle(valid_all)
     random.shuffle(train_all)
@@ -170,6 +307,7 @@ def main():
     os.makedirs(base_out + "/train", exist_ok=True)
     os.makedirs(base_out + "/valid", exist_ok=True)
     os.makedirs(base_out + "/test", exist_ok=True)
+    os.makedirs(base_out + "/dist_test", exist_ok=True)
 
     # Preprocess the training files
     procs = dict()
@@ -182,10 +320,14 @@ def main():
     procs[3] = Process(target=prep_images, args=(test_all, os.path.join(
         base_out, "test", "test.bz2"), False, ))
     procs[3].start()
+    procs[4] = Process(target=dist_images, args=(test_all, os.path.join(
+        base_out, "dist_test", "dist_test.bz2"), False, ))
+    procs[4].start()
 
     procs[1].join()
     procs[2].join()
     procs[3].join()
+    procs[4].join()
 
 
 def convert_2tf():
@@ -234,7 +376,7 @@ def wrap_image(image, label_score):
 
 if __name__ == '__main__':
     main()
-    convert_2tf()
+    #convert_2tf()
 
 
 

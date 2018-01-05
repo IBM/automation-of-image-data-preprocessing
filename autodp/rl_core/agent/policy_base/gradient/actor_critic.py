@@ -123,7 +123,9 @@ class ActorCritic(BaseAgent):
                 [_, err_value] = sess.run([self._target_graph.get_train_step,
                     self._target_graph.get_error], feed_dict={
                         self._target_graph.get_instance: i_states,
-                        self._target_graph.get_label: td_target})
+                        self._target_graph.get_label: td_target,
+                        self._target_graph.get_phase_train: True,
+                        self._target_graph.get_keep_prob: cf.keep_prob})
                 err_list_value.append(err_value)
 
                 # Update the policy network using the td error
@@ -131,7 +133,9 @@ class ActorCritic(BaseAgent):
                      self._main_graph.get_error], feed_dict={
                         self._main_graph.get_instance: i_states,
                         self._main_graph.get_current_action: i_actions,
-                        self._main_graph.get_label: td_error})
+                        self._main_graph.get_label: td_error,
+                        self._main_graph.get_phase_train: True,
+                        self._main_graph.get_keep_prob: cf.keep_prob})
                 err_list_policy.append(err_policy)
 
                 # Update input data after 1 step

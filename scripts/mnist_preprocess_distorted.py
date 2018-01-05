@@ -7,11 +7,11 @@ import struct
 import numpy as np
 import pickle
 import bz2
-from PIL import Image
+import random
 import cv2 as cv
 
 
-DIR = "/Users/minhtn/ibm/projects/autodp/storage/inputs/mnist"
+DIR = "/Users/minhtn/ibm/projects/sentana/data/mnist"
 
 
 def read(dataset="training", path="."):
@@ -43,65 +43,29 @@ def read(dataset="training", path="."):
         yield get_img(i)
 
 
-def norm_image(img):
-    """
-    Normalize PIL image. Normalizes luminance to (mean,std)=(0,1), and applies
-    a [1%, 99%] contrast stretch.
-    """
-    img_y, img_b, img_r = img.convert('YCbCr').split()
-
-    img_y_np = np.asarray(img_y).astype(float)
-
-    img_y_np /= 255
-    img_y_np -= img_y_np.mean()
-    img_y_np /= img_y_np.std()
-    scale = np.max([np.abs(np.percentile(img_y_np, 1.0)),
-                    np.abs(np.percentile(img_y_np, 99.0))])
-    img_y_np = img_y_np / scale
-    img_y_np = np.clip(img_y_np, -1.0, 1.0)
-    img_y_np = (img_y_np + 1.0) / 2.0
-
-    img_y_np = (img_y_np * 255 + 0.5).astype(np.uint8)
-
-    img_y = Image.fromarray(img_y_np)
-
-    img_ybr = Image.merge('YCbCr', (img_y, img_b, img_r))
-
-    img_nrm = img_ybr.convert('RGB')
-
-    return img_nrm
-
-
 def produce_data():
     # Writers
-    train_writer = bz2.BZ2File(os.path.join(DIR, "train.bz2"), "wb")
-    valid_writer = bz2.BZ2File(os.path.join(DIR, "valid.bz2"), "wb")
-    test_writer = bz2.BZ2File(os.path.join(DIR, "test.bz2"), "wb")
-    dist_test_writer = bz2.BZ2File(os.path.join(DIR, "dist_test.bz2"), "wb")
+    #train_writer = bz2.BZ2File(os.path.join(DIR, "train.bz2"), "wb")
+    valid_writer = bz2.BZ2File(os.path.join(DIR, "valid_org.bz2"), "wb")
+    #test_writer = bz2.BZ2File(os.path.join(DIR, "test_org.bz2"), "wb")
 
     # Data sets
     train_valid = list(read("training", DIR))
-    train = train_valid[:59000]
-    valid = train_valid[59000:]
-    test = list(read("testing", DIR))
+    #train = train_valid[:55000]
+    valid = train_valid[55000:]
+    #test = list(read("testing", DIR))
 
     # Process train, valid, test
-    process1(train, train_writer)
+    #process1(train, train_writer)
     process1(valid, valid_writer)
-    process1(test, test_writer)
-    process(test, dist_test_writer)
-
-    train_writer.close()
-    valid_writer.close()
-    test_writer.close()
-    dist_test_writer.close()
+    #process(test, test_writer)
 
 
 def process1(ds, writer):
     # Process each dataset
     for (l, i) in ds:
-        i = np.reshape(i, [28, 28, 1])
-        line = {"i": i, "l": np.int32(l)}
+        i = np.reshape(i / 255.0, [28, 28, 1])
+        line = {"img": i, "label": np.int32(l)}
         pickle.dump(line, writer, pickle.HIGHEST_PROTOCOL)
 
 
@@ -109,7 +73,7 @@ def process(ds, writer):
     # Process each dataset
     for (l, i) in ds:
         i = process_img(i)
-        line = {"i": i, "l": np.int32(l)}
+        line = {"img": i, "label": np.int32(l)}
         pickle.dump(line, writer, pickle.HIGHEST_PROTOCOL)
 
 
@@ -117,43 +81,23 @@ def process_img(img):
     # Process each image
     time = 0
     while (True):
+        #if np.random.rand() <= 0.5 or time == 10: break
         time += 1
-        action = np.random.randint(0, 11)
-
+        action = np.random.randint(0, 5)
         if action == 0:
             img = flip(img, -1)
-
         elif action == 1:
             img = flip(img, 0)
-
         elif action == 2:
             img = flip(img, 1)
-
         elif action == 3:
-            img = rotate(img, 1)
+            img = rotate(img, 90)
+        else:
+            img = rotate(img, -90)
 
-        elif action == 4:
-            img = rotate(img, 2)
+        if np.random.rand() <= 0.5 or time == 10: break
 
-        elif action == 5:
-            img = rotate(img, 4)
-
-        elif action == 6:
-            img = rotate(img, 8)
-
-        elif action == 7:
-            img = rotate(img, -1)
-
-        elif action == 8:
-            img = rotate(img, -2)
-
-        elif action == 9:
-            img = rotate(img, -4)
-
-        elif action == 10:
-            img = rotate(img, -8)
-
-        if np.random.rand() <= 0.5 or time == 5: break
+    img = img / 255.0
 
     return np.reshape(img, [28, 28, 1])
 

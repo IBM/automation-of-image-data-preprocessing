@@ -110,7 +110,9 @@ class VanilaReinforce(BaseAgent):
                                  self._main_graph.get_error], feed_dict={
                                     self._main_graph.get_instance: np.asarray([p[0]]),
                                     self._main_graph.get_current_action: np.asarray([p[1]]),
-                                    self._main_graph.get_label: np.asarray([sum_return])})
+                                    self._main_graph.get_label: np.asarray([sum_return]),
+                                    self._main_graph.get_phase_train: True,
+                                    self._main_graph.get_keep_prob: cf.keep_prob})
                             err_list.append(err)
 
                 # Update input data after 1 step

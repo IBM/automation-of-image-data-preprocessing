@@ -33,7 +33,8 @@ class BaseGraph(metaclass=abc.ABCMeta):
         :return:
         """
         net_arch_class = get_class(self._net_arch)
-        net_arch = net_arch_class(instance, self._name)
+        net_arch = net_arch_class(instance, self._phase_train,
+                                  self._keep_prob, self._name)
         preds = net_arch.build_arch()
 
         return preds
@@ -125,6 +126,22 @@ class BaseGraph(metaclass=abc.ABCMeta):
         :return:
         """
         return self._pred
+
+    @property
+    def get_phase_train(self):
+        """
+        Get the phase_train opt.
+        :return:
+        """
+        return self._phase_train
+
+    @property
+    def get_keep_prob(self):
+        """
+        Get the keep_prob opt.
+        :return:
+        """
+        return self._keep_prob
 
 
 

@@ -9,6 +9,7 @@ import json
 import ast
 from skopt import gp_minimize
 import numpy as np
+import tensorflow as tf
 
 
 cfg_file = "/Users/minhtn/ibm/projects/autodp/configs/hptune.cfg"
@@ -24,6 +25,7 @@ class HPTune(object):
         """
         self._space = self._create_space()
         print("Space is:", self._space)
+        self._count = 0
 
     def run_tuning(self, n_call=10):
         """
@@ -131,6 +133,11 @@ class HPTune(object):
         with open(self._config_input.get("config", "output"), "w") as autodp_cf:
             config.write(autodp_cf)
 
+        with open(self._config_input.get("config", "output") + str(self._count),
+                  "w") as autodp_cf:
+            config.write(autodp_cf)
+        self._count += 1
+
     def _obj_fun(self, x):
         """
         The objective function for hyper tuning, i.e., performance of the
@@ -144,6 +151,9 @@ class HPTune(object):
         # Read new configs
         from autodp import cf
         cf.reset_config(self._config_input.get("config", "output"))
+
+        # Reset default graph
+        tf.reset_default_graph()
 
         # Run the runner to get objective value
         module = __import__(self._config_input.get("objective", "module"),

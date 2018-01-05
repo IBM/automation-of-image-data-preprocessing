@@ -16,6 +16,7 @@ from autodp.utils.misc import get_class
 from autodp.rl_core.env.batch_env import BatchSimEnv
 from autodp.utils.misc import clear_model_dir
 from autodp.utils.misc import softmax
+from autodp.utils.feature_extractor import YouTube8MFeatureExtractor
 
 
 class DualQ(BaseAgent):
@@ -27,6 +28,11 @@ class DualQ(BaseAgent):
         Initialization.
         """
         super().__init__()
+
+        if cf.transfer:
+            self._extractor = YouTube8MFeatureExtractor()
+        else:
+            self._extractor = None
 
     def _setup_policy(self):
         """
@@ -72,7 +78,6 @@ class DualQ(BaseAgent):
         reward_all = 0
         done_all = 0
         early_stop = 0
-        #qouts = []
         err_list = []
         best_valid = -sys.maxsize
 
@@ -80,21 +85,23 @@ class DualQ(BaseAgent):
         for (images, labels) in train_reader.get_batch(sess=sess):
             # Add more images for batch processing
             image_batch.extend(images)
-            #qouts.extend([[0]*cf.num_class] * len(images))
             env.add(image_batch=images, label_batch=labels)
 
             while len(image_batch) > 0.3*cf.batch_size:
                 # Select actions using the policy network
+                if self._extractor is None:
+                    feed_dict = {self._main_graph.get_instance: image_batch}
+                else:
+                    rep_batch = [self._extractor.extract_rgb_frame_features(i)
+                                 for i in image_batch]
+                    feed_dict = {self._main_graph.get_instance: rep_batch}
                 actions = sess.run(self._main_graph.get_next_action,
-                    feed_dict={self._main_graph.get_instance: image_batch})
+                                   feed_dict=feed_dict)
 
                 # Do exploration
                 for i in range(len(actions)):
                     if np.random.rand(1) < cf.max_explore:
                         actions[i] = np.random.randint(0, cf.num_action)
-
-                # Update qouts
-                #qouts = list(np.array(qouts) + qout[:, 0:cf.num_class])
 
                 # Do actions
                 env.step(actions)
@@ -114,19 +121,28 @@ class DualQ(BaseAgent):
                     i_rewards = np.array([e[3] for e in train_batch])
                     end_mul = np.array([1 - e[4] for e in train_batch])
 
+                    if self._extractor is None:
+                        feed_dict = {self._main_graph.get_instance: o_states}
+                    else:
+                        rep_batch = [self._extractor.extract_rgb_frame_features(
+                            i) for i in o_states]
+                        feed_dict = {self._main_graph.get_instance: rep_batch}
                     qmax = sess.run(self._main_graph.get_qmax,
-                        feed_dict={self._main_graph.get_instance: o_states})
-                    #qmax[np.where(qmax < -1)] = -1
-                    #qmax[np.where(qmax > 1)] = 1
+                                    feed_dict=feed_dict)
                     target = i_rewards + cf.gamma * qmax * end_mul
-                    #target[np.where(target < -1)] = -1
-                    #target[np.where(target > 1)] = 1
 
+                    if self._extractor is None:
+                        rep_batch = i_states
+                    else:
+                        rep_batch = [self._extractor.extract_rgb_frame_features(
+                            i) for i in i_states]
                     [_, err] = sess.run([self._main_graph.get_train_step,
                         self._main_graph.get_error], feed_dict={
-                        self._main_graph.get_instance: i_states,
+                        self._main_graph.get_instance: rep_batch,
                         self._main_graph.get_current_action: i_actions,
-                        self._main_graph.get_label: target})
+                        self._main_graph.get_label: target,
+                        self._main_graph.get_phase_train: True,
+                        self._main_graph.get_keep_prob: cf.keep_prob})
                     err_list.append(err)
 
                 # Update input data after 1 step
@@ -135,7 +151,6 @@ class DualQ(BaseAgent):
                 done_all += sum(dones)
                 num_step += 1
                 image_batch = list(compress(states, np.logical_not(dones)))
-                #qouts = list(compress(qouts, np.logical_not(dones)))
                 env.update_done(dones)
 
                 # Do validation after a number of steps
@@ -198,9 +213,14 @@ class DualQ(BaseAgent):
 
             while len(image_batch) > 0:
                 # Select actions using the policy network
-                [actions, qout] = sess.run(
-                    [self._main_graph.get_next_action, self._main_graph.get_qout],
-                    feed_dict={self._main_graph.get_instance: image_batch})
+                if self._extractor is None:
+                    feed_dict = {self._main_graph.get_instance: image_batch}
+                else:
+                    rep_batch = [self._extractor.extract_rgb_frame_features(i)
+                                 for i in image_batch]
+                    feed_dict = {self._main_graph.get_instance: rep_batch}
+                [actions, qout] = sess.run([self._main_graph.get_next_action,
+                    self._main_graph.get_qout], feed_dict=feed_dict)
 
                 # Do actions
                 env.step(actions, qout[:, 0:cf.num_class])
@@ -251,10 +271,14 @@ class DualQ(BaseAgent):
 
                 while len(image_batch) > 0:
                     # Select actions using the policy network
-                    [actions, qout] = sess.run(
-                        [self._main_graph.get_next_action,
-                        self._main_graph.get_qout],
-                        feed_dict={self._main_graph.get_instance: image_batch})
+                    if self._extractor is None:
+                        feed_dict = {self._main_graph.get_instance: image_batch}
+                    else:
+                        rep_batch = [self._extractor.extract_rgb_frame_features(
+                            i) for i in image_batch]
+                        feed_dict = {self._main_graph.get_instance: rep_batch}
+                    [actions, qout] = sess.run([self._main_graph.get_next_action,
+                         self._main_graph.get_qout], feed_dict=feed_dict)
 
                     # Do actions
                     env.step(actions, qout[:, 0:cf.num_class])

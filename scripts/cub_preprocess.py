@@ -13,7 +13,7 @@ import bz2
 import random
 
 
-SIZE = 50
+SIZE = 100
 
 
 def format_labels(image_labels):
@@ -359,6 +359,9 @@ def preprocess():
     train, test = format_dataset(cub_dataset_dir, cub_image_dir)
     train, val = create_validation_split(train, fraction_per_class=0.1,
                                          shuffle=True)
+#    train_plus, test = create_validation_split(test, fraction_per_class=0.1,
+#                                         shuffle=True)
+#    train.extend(train_plus)
 
     # Store datasets
     prep_images(train, "/Users/minhtn/ibm/projects/autodp/storage/inputs/cub2011/CUB_200_2011/train.bz2")

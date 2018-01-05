@@ -97,8 +97,8 @@ class TFReader(BaseReader):
                 pass
 
             finally:
-                queue.close(cancel_pending_enqueues=True)
                 coord.request_stop()
+                sess.run(queue.close(cancel_pending_enqueues=True))
                 coord.join(threads)
 
         else:

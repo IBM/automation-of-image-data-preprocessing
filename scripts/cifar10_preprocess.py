@@ -3,44 +3,12 @@ The IBM License 2017.
 Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
 import os
-import struct
+
 import numpy as np
+from PIL import Image
 import pickle
 import bz2
-from PIL import Image
 import cv2 as cv
-
-
-DIR = "/Users/minhtn/ibm/projects/autodp/storage/inputs/mnist"
-
-
-def read(dataset="training", path="."):
-    """
-    Python function for importing the MNIST data set.
-    """
-    if dataset is "training":
-        fname_img = os.path.join(path, 'train-images-idx3-ubyte')
-        fname_lbl = os.path.join(path, 'train-labels-idx1-ubyte')
-    elif dataset is "testing":
-        fname_img = os.path.join(path, 't10k-images-idx3-ubyte')
-        fname_lbl = os.path.join(path, 't10k-labels-idx1-ubyte')
-    else:
-        raise ValueError("dataset must be 'testing' or 'training'")
-
-    # Load everything in some numpy arrays
-    with open(fname_lbl, 'rb') as flbl:
-        magic, num = struct.unpack(">II", flbl.read(8))
-        lbl = np.fromfile(flbl, dtype=np.int8)
-
-    with open(fname_img, 'rb') as fimg:
-        magic, num, rows, cols = struct.unpack(">IIII", fimg.read(16))
-        img = np.fromfile(fimg, dtype=np.uint8).reshape(len(lbl), rows, cols)
-
-    get_img = lambda idx: (lbl[idx], img[idx])
-
-    # Create an iterator which returns each image in turn
-    for i in range(len(lbl)):
-        yield get_img(i)
 
 
 def norm_image(img):
@@ -72,45 +40,40 @@ def norm_image(img):
     return img_nrm
 
 
-def produce_data():
-    # Writers
-    train_writer = bz2.BZ2File(os.path.join(DIR, "train.bz2"), "wb")
-    valid_writer = bz2.BZ2File(os.path.join(DIR, "valid.bz2"), "wb")
-    test_writer = bz2.BZ2File(os.path.join(DIR, "test.bz2"), "wb")
-    dist_test_writer = bz2.BZ2File(os.path.join(DIR, "dist_test.bz2"), "wb")
-
-    # Data sets
-    train_valid = list(read("training", DIR))
-    train = train_valid[:59000]
-    valid = train_valid[59000:]
-    test = list(read("testing", DIR))
-
-    # Process train, valid, test
-    process1(train, train_writer)
-    process1(valid, valid_writer)
-    process1(test, test_writer)
-    process(test, dist_test_writer)
-
-    train_writer.close()
-    valid_writer.close()
-    test_writer.close()
-    dist_test_writer.close()
-
-
-def process1(ds, writer):
-    # Process each dataset
-    for (l, i) in ds:
-        i = np.reshape(i, [28, 28, 1])
-        line = {"i": i, "l": np.int32(l)}
+def prep_images(data, label, out_file):
+    """
+    Preprocess images. Reads images in paths, and writes to out_dir.
+    """
+    writer = bz2.BZ2File(out_file, "wb")
+    for i in range(len(label)):
+        img_flat = data[i]
+        img_R = img_flat[0:1024].reshape((32, 32))
+        img_G = img_flat[1024:2048].reshape((32, 32))
+        img_B = img_flat[2048:3072].reshape((32, 32))
+        img = np.dstack((img_R, img_G, img_B))
+        img_nrm = np.asarray(norm_image(Image.fromarray(img)))
+        line = {"i": img_nrm, "l": np.int32(label[i])}
         pickle.dump(line, writer, pickle.HIGHEST_PROTOCOL)
 
+    writer.close()
 
-def process(ds, writer):
-    # Process each dataset
-    for (l, i) in ds:
-        i = process_img(i)
-        line = {"i": i, "l": np.int32(l)}
+
+def dist_images(data, label, out_file):
+    """
+    Preprocess images. Reads images in paths, and writes to out_dir.
+    """
+    writer = bz2.BZ2File(out_file, "wb")
+    for i in range(len(label)):
+        img_flat = data[i]
+        img_R = img_flat[0:1024].reshape((32, 32))
+        img_G = img_flat[1024:2048].reshape((32, 32))
+        img_B = img_flat[2048:3072].reshape((32, 32))
+        img = process_img(np.dstack((img_R, img_G, img_B)))
+        img_nrm = np.asarray(norm_image(Image.fromarray(img)))
+        line = {"i": img_nrm, "l": np.int32(label[i])}
         pickle.dump(line, writer, pickle.HIGHEST_PROTOCOL)
+
+    writer.close()
 
 
 def process_img(img):
@@ -155,7 +118,7 @@ def process_img(img):
 
         if np.random.rand() <= 0.5 or time == 5: break
 
-    return np.reshape(img, [28, 28, 1])
+    return np.reshape(img, [32, 32, 3])
 
 
 def flip(img, flip_code):
@@ -224,23 +187,41 @@ def rotate(img, degree):
     return state
 
 
-def show(image):
-    """
-    Render a given numpy.uint8 2D array of pixel data.
-    """
-    from matplotlib import pyplot
-    import matplotlib as mpl
-    fig = pyplot.figure()
-    ax = fig.add_subplot(1,1,1)
-    imgplot = ax.imshow(image, cmap=mpl.cm.Greys)
-    imgplot.set_interpolation('nearest')
-    ax.xaxis.set_ticks_position('top')
-    ax.yaxis.set_ticks_position('left')
-    pyplot.show()
+def unpickle(file):
+    with open(file, 'rb') as fo:
+        dict = pickle.load(fo, encoding='bytes')
+
+    return dict
+
+
+def preprocess():
+    # Change these paths to match the location of the CUB dataset on your machine
+    dataset_dir = "/Users/minhtn/ibm/projects/autodp/storage/inputs/cifar10/cifar-10-batches-py"
+
+    ds1 = unpickle(os.path.join(dataset_dir, "data_batch_1"))
+    ds2 = unpickle(os.path.join(dataset_dir, "data_batch_2"))
+    ds3 = unpickle(os.path.join(dataset_dir, "data_batch_3"))
+    ds4 = unpickle(os.path.join(dataset_dir, "data_batch_4"))
+    ds5 = unpickle(os.path.join(dataset_dir, "data_batch_5"))
+
+    train_data = np.vstack([ds1[b'data'], ds2[b'data'], ds3[b'data'], ds4[b'data'], ds5[b'data'][:9000]])
+    train_label = ds1[b'labels'] + ds2[b'labels'] + ds3[b'labels'] + ds4[b'labels'] + ds5[b'labels'][:9000]
+    valid_data = ds5[b'data'][9000:]
+    valid_label = ds5[b'labels'][9000:]
+    test_data = unpickle(os.path.join(dataset_dir, "test_batch"))[b'data']
+    test_label = unpickle(os.path.join(dataset_dir, "test_batch"))[b'labels']
+
+    # Store datasets
+    prep_images(train_data, train_label, "/Users/minhtn/ibm/projects/autodp/storage/inputs/cifar10/train.bz2")
+    prep_images(valid_data, valid_label, "/Users/minhtn/ibm/projects/autodp/storage/inputs/cifar10/valid.bz2")
+    prep_images(test_data, test_label, "/Users/minhtn/ibm/projects/autodp/storage/inputs/cifar10/test.bz2")
+    dist_images(test_data, test_label, "/Users/minhtn/ibm/projects/autodp/storage/inputs/cifar10/dist_test.bz2")
 
 
 if __name__ == "__main__":
-    produce_data()
+    preprocess()
+
+
 
 
 

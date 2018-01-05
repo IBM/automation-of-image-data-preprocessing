@@ -33,6 +33,8 @@ class Q1Graph(BaseGraph):
             shape=[None, cf.ima_height, cf.ima_width, cf.ima_depth])
         self._action = tf.placeholder(tf.int32, shape=[None])
         self._target = tf.placeholder(tf.float32, shape=[None])
+        self._phase_train = tf.placeholder_with_default(False, shape=())
+        self._keep_prob = tf.placeholder_with_default(1.0, shape=())
 
         # Build network architecture
         self._pred = self._inference(self._instance)

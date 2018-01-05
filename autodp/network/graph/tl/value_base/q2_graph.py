@@ -29,8 +29,7 @@ class Q2Graph(BaseGraph):
         :return:
         """
         # Declare network inputs
-        self._instance = tf.placeholder(dtype=tf.float32,
-            shape=[None, cf.ima_height, cf.ima_width, cf.ima_depth])
+        self._instance = tf.placeholder(dtype=tf.float32, shape=[None, 1024])
         self._action = tf.placeholder(tf.int32, shape=[None])
         self._target = tf.placeholder(tf.float32, shape=[None])
         self._phase_train = tf.placeholder_with_default(False, shape=())

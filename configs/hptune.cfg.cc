@@ -49,6 +49,11 @@ constants={
 			"min_explore":{"value":0.1, "section":"rl_param"},
 			"buf_size":{"value":40000, "section":"rl_param"},
 			"anneal_step":{"value":100000, "section":"rl_param"}
+			"kernel_size": {"value":[[7, 6, 1, 92], [5, 2, 92, 75], [2, 3, 75, 34]], "section":"general_param"},
+			"kernel_stride": {"value":[[7, 6, 1, 92], [5, 2, 92, 75], [2, 3, 75, 34]], "section":"general_param"},
+			"pool_size": {"value":[[7, 6, 1, 92], [5, 2, 92, 75], [2, 3, 75, 34]], "section":"general_param"},
+			"pool_stride": {"value":[[7, 6, 1, 92], [5, 2, 92, 75], [2, 3, 75, 34]], "section":"general_param"},
+
 			}
 
 

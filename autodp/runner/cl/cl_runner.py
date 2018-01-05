@@ -86,8 +86,12 @@ class CLRunner(NNRunner):
             update_ops = copy_network(tf.trainable_variables())
 
             # Config trainable variables for transferring learning
-            common_vars = tf.global_variables()[:2*(len(
-                cf.kernel_size) + len(cf.fc_size))]
+            if cf.rl_graph.split(".")[3] == "tl":
+                common_vars = tf.global_variables()[:2*len(cf.fc_size)]
+            else:
+                common_vars = tf.global_variables()[:2*(len(
+                    cf.kernel_size) + len(cf.fc_size))]
+
             if cont == False:
                 train_vars = tf.trainable_variables()[:int(len(
                     tf.trainable_variables())/2)]
@@ -117,6 +121,8 @@ class CLRunner(NNRunner):
                                      train_nng.get_label,
                                      valid_nng.get_instance,
                                      valid_nng.get_label,
+                                     train_nng.get_phase_train,
+                                     train_nng.get_keep_prob,
                                      update_ops, verbose)
 
         return best_valid

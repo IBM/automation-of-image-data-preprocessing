@@ -7,7 +7,7 @@ from autodp import cf
 
 
 @BaseAction.register
-class SimpleAction(BaseAction):
+class MultiSimpleAction(BaseAction):
     """
     This class implements simple actions on an image such as flip, rotate, etc.
     """
@@ -23,9 +23,10 @@ class SimpleAction(BaseAction):
         :param action:
         :param cur_state:
         :param label:
-        :param param_list: not used
+        :param param_list:
         :return:
         """
+        tlcr, brcr = False, False
         if action < cf.num_class:
             state = cur_state
             if label == action:
@@ -55,41 +56,33 @@ class SimpleAction(BaseAction):
             done = False
 
         elif action == cf.num_class + 4:
-            state = self._rotate(cur_state, 2)
+            state = self._rotate(cur_state, 5)
             reward = 0
             done = False
 
         elif action == cf.num_class + 5:
-            state = self._rotate(cur_state, 4)
-            reward = 0
-            done = False
-
-        elif action == cf.num_class + 6:
-            state = self._rotate(cur_state, 8)
-            reward = 0
-            done = False
-
-        elif action == cf.num_class + 7:
             state = self._rotate(cur_state, -1)
             reward = 0
             done = False
 
+        elif action == cf.num_class + 6:
+            state = self._rotate(cur_state, -5)
+            reward = 0
+            done = False
+
+        elif action == cf.num_class + 7:
+            state = self._top_left_crop(cur_state, param_list[-2])
+            reward = 0
+            done = False
+            tlcr = True
+
         elif action == cf.num_class + 8:
-            state = self._rotate(cur_state, -2)
+            state = self._bottom_right_crop(cur_state, param_list[-1])
             reward = 0
             done = False
+            brcr = True
 
-        elif action == cf.num_class + 9:
-            state = self._rotate(cur_state, -4)
-            reward = 0
-            done = False
-
-        elif action == cf.num_class + 10:
-            state = self._rotate(cur_state, -8)
-            reward = 0
-            done = False
-
-        return state, reward, done, False, False
+        return state, reward, done, tlcr, brcr
 
 
 

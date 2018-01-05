@@ -5,7 +5,7 @@ Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 import numpy as np
 
 from autodp import cf
-from autodp.rl_core.env.action.simple_action import SimpleAction
+from autodp.utils.misc import get_class
 
 
 class SimEnv(object):
@@ -24,7 +24,12 @@ class SimEnv(object):
         self._age = 0
         self._path = []
         self._origin_state = state
-        self._actor = SimpleAction()
+        self._tlcr_ratio = 0.95
+        self._brcr_ratio = 0.95
+
+        # Get action class
+        action_class = get_class(cf.rl_action)
+        self._actor = action_class()
 
     @property
     def get_label(self):
@@ -54,6 +59,8 @@ class SimEnv(object):
         self._origin_state = state
         self._age = 0
         self._path = []
+        self._tlcr_ratio = 0.95
+        self._brcr_ratio = 0.95
 
     def restart(self):
         """
@@ -64,11 +71,12 @@ class SimEnv(object):
         self._age = 0
         self._path = []
 
-    def step(self, action, qout=None):
+    def step(self, action, qout=None, param_list=[]):
         """
         Step one step in the environment.
         :param action:
         :param qout:
+        :param param_list:
         :return:
         """
         # Recover image when it is overaged
@@ -80,8 +88,12 @@ class SimEnv(object):
             else:
                 action = np.argmax(qout)
 
-        state, reward, done = self._actor.apply_action(action, self._state,
-                                                       self._label)
+        param_list.extend([self._tlcr_ratio, self._brcr_ratio])
+        state, reward, done, tlcr, brcr = self._actor.apply_action(
+            action, self._state, self._label, param_list)
+
+        if tlcr: self._tlcr_ratio *= 0.95
+        if brcr: self._brcr_ratio *= 0.95
 
         # Store example
         ex = [self._state, action, state, reward, done]

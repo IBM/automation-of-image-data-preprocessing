@@ -16,13 +16,15 @@ class RLArch(BaseArch):
     """
     This class implements a normal network.
     """
-    def __init__(self, instance, name):
+    def __init__(self, instance, phase_train, keep_prob, name):
         """
         Initialize by storing the input instance.
         :param instance:
+        :param phase_train:
+        :param keep_prob:
         :param name:
         """
-        super().__init__(instance, name)
+        super().__init__(instance, phase_train, keep_prob, name)
 
     def build_arch(self):
         """

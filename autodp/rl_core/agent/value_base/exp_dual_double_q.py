@@ -150,7 +150,9 @@ class ExpDualDoubleQ(BaseAgent):
                         self._main_graph.get_error], feed_dict={
                         self._main_graph.get_instance: i_states,
                         self._main_graph.get_current_action: i_actions,
-                        self._main_graph.get_label: target})
+                        self._main_graph.get_label: target,
+                        self._main_graph.get_phase_train: True,
+                        self._main_graph.get_keep_prob: cf.keep_prob})
                     update_network(sess, update_ops)
                     err_list.append(err)
 

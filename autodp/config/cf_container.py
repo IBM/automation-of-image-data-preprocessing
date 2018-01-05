@@ -29,6 +29,8 @@ class Config(object):
                                                      "max_grad_norm"))
         self.valid_step = int(config_parser.get("general_param", "valid_step"))
         self.reader = config_parser.get("general_param", "reader")
+        self.transfer = config_parser.getboolean("general_param", "transfer")
+        self.keep_prob = float(config_parser.get("general_param", "keep_prob"))
 
         # Trainable via hypertuning
         self.learning_rate = float(config_parser.get("general_param",
@@ -54,6 +56,7 @@ class Config(object):
         self.rl_loss = config_parser.get("rl_param", "rl_loss")
         self.rl_graph = config_parser.get("rl_param", "rl_graph")
         self.rl_agent = config_parser.get("rl_param", "rl_agent")
+        self.rl_action = config_parser.get("rl_param", "rl_action")
         self.num_action = int(config_parser.get("rl_param", "num_action"))
         self.max_explore = float(config_parser.get("rl_param", "max_explore"))
         self.buf_size = int(config_parser.get("rl_param", "buf_size"))

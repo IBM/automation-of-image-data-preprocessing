@@ -73,7 +73,7 @@ class NNRunner(BaseRunner):
 
     def _train(self, sess, train_reader, valid_reader, train_op, train_err_op,
                valid_err_op, train_image_op, train_label_op, valid_image_op,
-               valid_label_op, update_ops, verbose):
+               valid_label_op, phase_train, keep_prob, update_ops, verbose):
         """
         Do training with a sqreader.
         :param sess:
@@ -86,6 +86,8 @@ class NNRunner(BaseRunner):
         :param train_label_op:
         :param valid_image_op:
         :param valid_label_op:
+        :param phase_train:
+        :param keep_prob:
         :param update_ops:
         :param verbose:
         :return:
@@ -94,7 +96,8 @@ class NNRunner(BaseRunner):
         early_stop, best_valid = 0, sys.maxsize
         for (images, labels) in train_reader.get_batch(sess=sess):
             # Do training
-            fd = {train_image_op: images, train_label_op: labels}
+            fd = {train_image_op: images, train_label_op: labels,
+                  phase_train: True, keep_prob: cf.keep_prob}
             err = self._run_train_step(sess, train_op, train_err_op, fd)
             err_list.append(err)
             step += 1
@@ -206,7 +209,6 @@ class NNRunner(BaseRunner):
 
             # Copy network between train and validation
             update_ops = copy_network(tf.trainable_variables())
-
             sess.run(tf.group(tf.global_variables_initializer(),
                               tf.local_variables_initializer()))
 
@@ -230,6 +232,8 @@ class NNRunner(BaseRunner):
                                      train_nng.get_label,
                                      valid_nng.get_instance,
                                      valid_nng.get_label,
+                                     train_nng.get_phase_train,
+                                     train_nng.get_keep_prob,
                                      update_ops, verbose)
 
         return best_valid
