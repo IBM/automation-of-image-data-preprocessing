@@ -9,10 +9,7 @@ from autodp.config.cf_container import Config as cf
 
 
 def letsgo():
-    """
-    Main method to start testing RL training.
-    :return:
-    """
+    """Main method to start testing RL training."""
     # Create the runner
     cl_runner = CLRunner(preprocess=True)
 
@@ -26,26 +23,3 @@ def letsgo():
 
 if __name__ == "__main__":
     letsgo()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

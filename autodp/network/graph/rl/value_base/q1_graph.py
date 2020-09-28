@@ -10,27 +10,15 @@ from autodp import cf
 
 @BaseGraph.register
 class Q1Graph(BaseGraph):
-    """
-    This class implements a tensorflow graph for a Q-network with one value
-    output in reinforcement learning.
-    """
+    """This class implements a tensorflow graph for a Q-network with one value output in reinforcement learning."""
     def __init__(self, net_arch, loss_func, name):
-        """
-        Initialization of building a graph.
-        :param net_arch:
-        :param loss_func:
-        :param name:
-        """
+        """Initialization of building a graph."""
         super().__init__(net_arch, loss_func, name)
 
     def _build_model(self):
-        """
-        Build the total graph.
-        :return:
-        """
+        """Build the total graph."""
         # Declare network inputs
-        self._instance = tf.placeholder(dtype=tf.float32,
-            shape=[None, cf.ima_height, cf.ima_width, cf.ima_depth])
+        self._instance = tf.placeholder(dtype=tf.float32, shape=[None, cf.ima_height, cf.ima_width, cf.ima_depth])
         self._action = tf.placeholder(tf.int32, shape=[None])
         self._target = tf.placeholder(tf.float32, shape=[None])
         self._phase_train = tf.placeholder_with_default(False, shape=())
@@ -44,41 +32,5 @@ class Q1Graph(BaseGraph):
 
     @property
     def get_current_action(self):
-        """
-        Get the current evaluated action.
-        :return:
-        """
+        """Get the current evaluated action."""
         return self._action
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

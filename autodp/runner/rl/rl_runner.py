@@ -14,22 +14,12 @@ from autodp import cf
 
 @BaseRunner.register
 class RLRunner(BaseRunner):
-    """
-    This class implements a runner for reinforcement learning.
-    """
+    """This class implements a runner for reinforcement learning."""
     def __init__(self):
-        """
-        Temporarily do nothing for initialization.
-        """
         pass
 
     def train_model(self, cont=False, verbose=True):
-        """
-        Main method for training rl policy.
-        :param cont:
-        :param verbose:
-        :return:
-        """
+        """Main method for training rl policy."""
         with tf.Graph().as_default(), tf.Session() as sess:
             # Initialize rl agent
             rl_agent_class = get_class(cf.rl_agent)
@@ -43,8 +33,7 @@ class RLRunner(BaseRunner):
             valid_reader = reader_class(cf.valid_path)
 
             # Do initialization
-            sess.run(tf.group(tf.global_variables_initializer(),
-                              tf.local_variables_initializer()))
+            sess.run(tf.group(tf.global_variables_initializer(), tf.local_variables_initializer()))
 
             # Load current model if continue training
             if cont:
@@ -53,26 +42,18 @@ class RLRunner(BaseRunner):
                 ckpt = tf.train.get_checkpoint_state(cf.save_model + "/rl")
                 if ckpt and ckpt.model_checkpoint_path:
                     saver.restore(sess, ckpt.model_checkpoint_path)
-
                 else:
-                    warnings.warn("Model not exist, train a new model now")
+                    warnings.warn("Model not exist, train a new model now.")
 
                 # Load specific objects
                 rl_agent.load_specific_objects()
 
             # Training
-            best_valid = rl_agent.train_policy(sess, train_reader,
-                                               valid_reader, verbose)
-
+            best_valid = rl_agent.train_policy(sess, train_reader, valid_reader, verbose)
         return best_valid
 
     def test_model(self, path=cf.test_path, fh=None):
-        """
-        Main method for testing.
-        :param path:
-        :param fh:
-        :return:
-        """
+        """Main method for testing."""
         with tf.Graph().as_default(), tf.Session() as sess:
             # Initialize rl agent
             rl_agent_class = get_class(cf.rl_agent)
@@ -83,17 +64,15 @@ class RLRunner(BaseRunner):
             reader = reader_class(path)
 
             # Do initialization
-            sess.run(tf.group(tf.global_variables_initializer(),
-                              tf.local_variables_initializer()))
+            sess.run(tf.group(tf.global_variables_initializer(),tf.local_variables_initializer()))
 
             # Load the model
             saver = tf.train.Saver(tf.global_variables())
             ckpt = tf.train.get_checkpoint_state(cf.save_model + "/rl")
             if ckpt and ckpt.model_checkpoint_path:
                 saver.restore(sess, ckpt.model_checkpoint_path)
-
             else:
-                warnings.warn("Model not exist, train a new model now")
+                warnings.warn("Model not exist, train a new model now.")
 
             # Actual test
             reward, predict, actual, prob = rl_agent.predict(sess, reader, fh)
@@ -104,56 +83,6 @@ class RLRunner(BaseRunner):
             accuracy = 1-sum(bool_tmp)/float(len(actual))
 
             # Support kaggle output
-            df = pd.concat([pd.DataFrame({"id": actual, "label": predict}),
-                pd.DataFrame(np.array(prob))], axis=1)
-            df.to_csv(cf.result_path + "/result.csv", header=True,
-                      sep=",", index=False)
-
+            df = pd.concat([pd.DataFrame({"id": actual, "label": predict}), pd.DataFrame(np.array(prob))], axis=1)
+            df.to_csv(cf.result_path + "/result.csv", header=True, sep=",", index=False)
         return accuracy, reward, predict, actual
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

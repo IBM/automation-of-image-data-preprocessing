@@ -15,23 +15,13 @@ from autodp.utils.tf_utils import copy_network
 
 
 class CLRunner(NNRunner):
-    """
-    This class implements a way to allow to continue learning after using
-    results of preprocessing.
-    """
+    """This class implements a way to allow to continue learning after using results of preprocessing."""
     def __init__(self, preprocess=True):
-        """
-        Initialize by preprocessing image data.
-        :param preprocess:
-        """
         if preprocess:
             self._preprocess_data()
 
     def _preprocess_data(self):
-        """
-        Method to do preprocessing.
-        :return:
-        """
+        """Method to do preprocessing."""
         with tf.Graph().as_default(), tf.Session() as sess:
             # Initialize rl agent
             rl_agent_class = get_class(cf.rl_agent)
@@ -46,8 +36,7 @@ class CLRunner(NNRunner):
             locations = ["pp_train", "pp_valid", "pp_test"]
 
             # Do initialization
-            sess.run(tf.group(tf.global_variables_initializer(),
-                              tf.local_variables_initializer()))
+            sess.run(tf.group(tf.global_variables_initializer(), tf.local_variables_initializer()))
 
             # Load the model
             saver = tf.train.Saver(tf.global_variables())
@@ -55,137 +44,53 @@ class CLRunner(NNRunner):
             if ckpt and ckpt.model_checkpoint_path:
                 saver.restore(sess, ckpt.model_checkpoint_path)
             else:
-                raise ("Model not exist")
+                raise ("Model not exist.")
 
             # Do preprocessing
             rl_agent.preprocess(sess, readers, locations)
 
     def train_model(self, cont=False, verbose=True):
-        """
-        Main method for training.
-        :param cont: fine tuning or transferred learning (default)
-        :param verbose:
-        :return:
-        """
+        """Main method for training."""
         with tf.Graph().as_default(), tf.Session() as sess:
             # Initialize a data reader for train
             reader_class = get_class(cf.reader)
-            train_reader = reader_class(os.path.join(cf.prep_path, "pp_train"),
-                                        cf.num_epoch)
+            train_reader = reader_class(os.path.join(cf.prep_path, "pp_train"), cf.num_epoch)
 
             # Initialize a data reader for validation
             valid_reader = reader_class(os.path.join(cf.prep_path, "pp_valid"))
 
             # Build graph and do initialization
-            train_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                                name="main_graph")
-            valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss,
-                                name="valid_nng")
+            train_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss, name="main_graph")
+            valid_nng = NNGraph(net_arch=cf.nn_arch, loss_func=cf.nn_loss, name="valid_nng")
 
             # Copy network between train and validation
             update_ops = copy_network(tf.trainable_variables())
 
             # Config trainable variables for transferring learning
             if cf.rl_graph.split(".")[3] == "tl":
-                common_vars = tf.global_variables()[:2*len(cf.fc_size)]
+                common_vars = tf.global_variables()[: 2 * len(cf.fc_size)]
             else:
-                common_vars = tf.global_variables()[:2*(len(
-                    cf.kernel_size) + len(cf.fc_size))]
+                common_vars = tf.global_variables()[: 2 * (len(cf.kernel_size) + len(cf.fc_size))]
 
-            if cont == False:
-                train_vars = tf.trainable_variables()[:int(len(
-                    tf.trainable_variables())/2)]
+            if cont is False:
+                train_vars = tf.trainable_variables()[: int(len(tf.trainable_variables()) / 2)]
                 var_list = [x for x in train_vars if x not in common_vars]
                 train_nng.reset_train_step(var_list)
 
             # Do initialization
-            sess.run(tf.group(tf.global_variables_initializer(),
-                              tf.local_variables_initializer()))
+            sess.run(tf.group(tf.global_variables_initializer(), tf.local_variables_initializer()))
 
             # Load existing model to continue training
-            # Load the model
             saver = tf.train.Saver(common_vars)
             ckpt = tf.train.get_checkpoint_state(cf.save_model + "/rl")
             if ckpt and ckpt.model_checkpoint_path:
                 saver.restore(sess, ckpt.model_checkpoint_path)
-
             else:
-                warnings.warn("Model not exist, train a new model now")
+                warnings.warn("Model not exist, train a new model now.")
 
             # Start to train
-            best_valid = self._train(sess, train_reader, valid_reader,
-                                     train_nng.get_train_step,
-                                     train_nng.get_error,
-                                     valid_nng.get_error,
-                                     train_nng.get_instance,
-                                     train_nng.get_label,
-                                     valid_nng.get_instance,
-                                     valid_nng.get_label,
-                                     train_nng.get_phase_train,
-                                     train_nng.get_keep_prob,
-                                     update_ops, verbose)
-
+            best_valid = self._train(sess, train_reader, valid_reader, train_nng.get_train_step, train_nng.get_error,
+                                     valid_nng.get_error, train_nng.get_instance, train_nng.get_label,
+                                     valid_nng.get_instance, valid_nng.get_label, train_nng.get_phase_train,
+                                     train_nng.get_keep_prob, update_ops, verbose)
         return best_valid
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

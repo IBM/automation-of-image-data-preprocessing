@@ -15,39 +15,24 @@ from autodp.utils.tf_utils import wrap_image
 
 
 class BaseAgent(metaclass=abc.ABCMeta):
-    """
-    This abstract class defines methods exposed by a reinforcement learning
-    agent.
-    """
+    """This abstract class defines methods exposed by a reinforcement learning agent."""
     def __init__(self):
-        """
-        Initialization.
-        """
         # Setup neural network functions
         self._setup_policy()
 
     @staticmethod
     def _add_extra_example(env):
-        """
-        Strategy to add extra examples to the training set.
-        :param env:
-        :return:
-        """
+        """Strategy to add extra examples to the training set."""
         extra = []
         paths = env.get_paths()
         for path in paths:
             if path[-1][1] < cf.num_class:
                 extra.extend(path)
-
         return extra
 
     @staticmethod
     def _compute_done(env):
-        """
-        Search for done images.
-        :param env:
-        :return:
-        """
+        """Search for done images."""
         rewards, dones, states, actions = [], [], [], []
         trues = env.get_labels()
         paths = env.get_paths()
@@ -56,19 +41,11 @@ class BaseAgent(metaclass=abc.ABCMeta):
             dones.append(path[-1][4])
             states.append(path[-1][2])
             actions.append(path[-1][1])
-
         return rewards, dones, states, actions, trues
 
     @staticmethod
     def _done_analysis(env, fh, idx):
-        """
-        This method is used to output images as well as their
-        preprocessing paths.
-        :param env:
-        :param fh:
-        :param idx:
-        :return:
-        """
+        """This method is used to output images as well as their preprocessing paths."""
         trues = env.get_labels()
         paths = env.get_paths()
         for (i, path) in enumerate(paths):
@@ -79,8 +56,7 @@ class BaseAgent(metaclass=abc.ABCMeta):
                 strength = "weak" if len(path) > cf.max_age else "strong"
 
                 # Store info
-                info = str(idx) + "\t\t" + str(trues[i]) + "\t\t" + str(
-                    path[-1][1]) + "\t\t" + strength + "\t\t"
+                info = str(idx) + "\t\t" + str(trues[i]) + "\t\t" + str(path[-1][1]) + "\t\t" + strength + "\t\t"
 
                 # Traverse current path
                 list_im = []
@@ -106,24 +82,16 @@ class BaseAgent(metaclass=abc.ABCMeta):
                 # Store information to file
                 info += "\n"
                 fh.write(info)
-
         return idx
 
     @staticmethod
     def _store_prep_images(fh, images, labels):
-        """
-        Store preprocessed images.
-        :param fh:
-        :param images:
-        :param labels:
-        :return:
-        """
+        """Store preprocessed images."""
         if cf.reader.split(".")[-1] == "TFReader":
             for (image, label) in zip(images, labels):
                 tf_record = wrap_image(image, int(label))
                 tf_writer = fh[np.random.randint(0, 5)]
                 tf_writer.write(tf_record.SerializeToString())
-
         else:
             for (image, label) in zip(images, labels):
                 line = {"i": image, "l": label}
@@ -131,110 +99,29 @@ class BaseAgent(metaclass=abc.ABCMeta):
 
     @staticmethod
     def _get_current_step(env):
-        """
-        Get examples from the latest step in the batch.
-        :param env:
-        :return:
-        """
+        """Get examples from the latest step in the batch."""
         extra = []
         paths = env.get_paths()
         for path in paths:
             extra.append(path[-1])
-
         return extra
 
     @abc.abstractmethod
     def _setup_policy(self):
-        """
-        Build one or more networks to approximate value, action-value and
-        policy functions.
-        :return:
-        """
+        """Build one or more networks to approximate value, action-value and policy functions."""
 
     @abc.abstractmethod
     def load_specific_objects(self):
-        """
-        This method can be overwritten to initialize specific objects needed
-        to continue learning.
-        :return:
-        """
+        """This method can be overwritten to initialize specific objects needed to continue learning."""
 
     @abc.abstractmethod
     def save_specific_objects(self):
-        """
-        This method can be overwritten to store specific objects needed
-        to continue learning.
-        :return:
-        """
+        """This method can be overwritten to store specific objects needed to continue learning."""
 
     @abc.abstractmethod
     def train_policy(self, sess, train_reader, valid_reader, verbose):
-        """
-        Policy improvement and evaluation.
-        :param sess:
-        :param train_reader:
-        :param valid_reader:
-        :param verbose:
-        :return:
-        """
+        """Policy improvement and evaluation."""
 
     @abc.abstractmethod
     def predict(self, sess, reader):
-        """
-        Apply the policy to predict image classification.
-        :param sess:
-        :param reader:
-        :return:
-        """
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        """Apply the policy to predict image classification."""

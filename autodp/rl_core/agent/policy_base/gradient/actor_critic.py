@@ -11,67 +11,38 @@ from itertools import compress
 import bz2
 
 from autodp.rl_core.agent.base_agent import BaseAgent
-from autodp.utils.misc import get_class
+from autodp.utils.misc import get_class, clear_model_dir, softmax
 from autodp.rl_core.env.batch_env import BatchSimEnv
-from autodp.utils.misc import clear_model_dir
 from autodp import cf
-from autodp.utils.misc import softmax
 
 
 class ActorCritic(BaseAgent):
-    """
-    This class implements the Actor-Critic gradient policy.
-    """
+    """This class implements the Actor-Critic gradient policy."""
     def __init__(self):
-        """
-        Initialization, call to father's init.
-        """
+        """Initialization, call to father's init."""
         super().__init__()
 
     def _setup_policy(self):
-        """
-        Build the policy network.
-        :return:
-        """
+        """Build the policy network."""
         # Loss function must be the advantage log loss
         if cf.rl_loss != "autodp.network.loss.adv_log.AdvLog":
-            raise ValueError("Policy gradient methods must be used with"
-                             "the advantage log loss")
+            raise ValueError("Policy gradient methods must be used with the advantage log loss.")
 
         # Construct 2 reinforcement learning graphs
         policy_graph_class = get_class(cf.rl_graph)
-        self._main_graph = policy_graph_class(net_arch=cf.rl_arch,
-                                              loss_func=cf.rl_loss,
-                                              name="main_graph")
-        value_graph_class = get_class(
-            "autodp.network.graph.rl.policy_base.value_graph.ValueGraph")
-        self._target_graph = value_graph_class(
-            net_arch="autodp.network.arch.rl.value_arch.ValueArch",
-            loss_func="autodp.network.loss.mse.MSE", name="target_graph")
+        self._main_graph = policy_graph_class(net_arch=cf.rl_arch, loss_func=cf.rl_loss, name="main_graph")
+        value_graph_class = get_class("autodp.network.graph.rl.policy_base.value_graph.ValueGraph")
+        self._target_graph = value_graph_class(net_arch="autodp.network.arch.rl.value_arch.ValueArch",
+                                               loss_func="autodp.network.loss.mse.MSE", name="target_graph")
 
     def load_specific_objects(self):
-        """
-        Do nothing.
-        :return:
-        """
         pass
 
     def save_specific_objects(self):
-        """
-        Do nothing.
-        :return:
-        """
         pass
 
     def train_policy(self, sess, train_reader, valid_reader, verbose):
-        """
-        Policy improvement and evaluation.
-        :param sess:
-        :param train_reader:
-        :param valid_reader:
-        :param verbose:
-        :return:
-        """
+        """Policy improvement and evaluation."""
         # Initialize variables
         env = BatchSimEnv()
         image_batch = []
@@ -91,12 +62,10 @@ class ActorCritic(BaseAgent):
 
             while len(image_batch) > 0.3 * cf.batch_size:
                 # Select actions using the policy network
-                action_probs = sess.run(self._main_graph.get_action_probs,
-                    feed_dict={self._main_graph.get_instance: image_batch})
+                action_probs = sess.run(self._main_graph.get_action_probs, {self._main_graph.get_instance: image_batch})
                 actions = []
                 for i in range(len(action_probs)):
-                    actions.append(np.random.choice(np.arange(cf.num_action),
-                                                    p=action_probs[i]))
+                    actions.append(np.random.choice(np.arange(cf.num_action), p=action_probs[i]))
 
                 # Do actions
                 env.step(actions)
@@ -112,30 +81,26 @@ class ActorCritic(BaseAgent):
                 end_mul = np.array([1 - e[4] for e in train_batch])
 
                 # Calculate TD Target
-                next_value = sess.run(self._target_graph.get_value,
-                    feed_dict={self._target_graph.get_instance: o_states})
-                curr_value = sess.run(self._target_graph.get_value,
-                    feed_dict={self._target_graph.get_instance: i_states})
+                next_value = sess.run(self._target_graph.get_value, {self._target_graph.get_instance: o_states})
+                curr_value = sess.run(self._target_graph.get_value, {self._target_graph.get_instance: i_states})
                 td_target = i_rewards + cf.gamma * next_value * end_mul
                 td_error = td_target - curr_value
 
                 # Update the value network
-                [_, err_value] = sess.run([self._target_graph.get_train_step,
-                    self._target_graph.get_error], feed_dict={
-                        self._target_graph.get_instance: i_states,
-                        self._target_graph.get_label: td_target,
-                        self._target_graph.get_phase_train: True,
-                        self._target_graph.get_keep_prob: cf.keep_prob})
+                [_, err_value] = sess.run([self._target_graph.get_train_step, self._target_graph.get_error],
+                                          {self._target_graph.get_instance: i_states,
+                                           self._target_graph.get_label: td_target,
+                                           self._target_graph.get_phase_train: True,
+                                           self._target_graph.get_keep_prob: cf.keep_prob})
                 err_list_value.append(err_value)
 
                 # Update the policy network using the td error
-                [_, err_policy] = sess.run([self._main_graph.get_train_step,
-                     self._main_graph.get_error], feed_dict={
-                        self._main_graph.get_instance: i_states,
-                        self._main_graph.get_current_action: i_actions,
-                        self._main_graph.get_label: td_error,
-                        self._main_graph.get_phase_train: True,
-                        self._main_graph.get_keep_prob: cf.keep_prob})
+                [_, err_policy] = sess.run([self._main_graph.get_train_step, self._main_graph.get_error],
+                                           {self._main_graph.get_instance: i_states,
+                                            self._main_graph.get_current_action: i_actions,
+                                            self._main_graph.get_label: td_error,
+                                            self._main_graph.get_phase_train: True,
+                                            self._main_graph.get_keep_prob: cf.keep_prob})
                 err_list_policy.append(err_policy)
 
                 # Update input data after 1 step
@@ -161,34 +126,24 @@ class ActorCritic(BaseAgent):
 
                             # Save specific objects
                             self.save_specific_objects()
-
                     else:
                         early_stop += 1
 
                     if verbose:
-                        print("Step %d accumulated %g rewards, processed %d "
-                              "images, train errors (%g, %g), valid rewards %g"
-                              % (num_step, reward_all, done_all,
-                                 np.mean(err_list_policy),
-                                 np.mean(err_list_value), best_valid))
+                        print("Step %d accumulated %g rewards, processed %d images, train err (%g, %g), val rewards %g."
+                              % (num_step, reward_all, done_all, np.mean(err_list_policy), np.mean(err_list_value),
+                                 best_valid))
 
                     err_list_policy = []
                     err_list_value = []
 
                     if early_stop >= 15:
-                        print("Exit due to early stopping")
+                        print("Exit due to early stopping.")
                         return -best_valid
-
         return -best_valid
 
     def predict(self, sess, reader, fh=None):
-        """
-        Apply the policy to predict image classification.
-        :param sess:
-        :param reader:
-        :param fh:
-        :return:
-        """
+        """Apply the policy to predict image classification."""
         # Initialize variables
         env = BatchSimEnv()
         image_batch = []
@@ -208,8 +163,7 @@ class ActorCritic(BaseAgent):
 
             while len(image_batch) > 0:
                 # Select actions using the policy network
-                action_probs = sess.run(self._main_graph.get_action_probs,
-                    feed_dict={self._main_graph.get_instance: image_batch})
+                action_probs = sess.run(self._main_graph.get_action_probs, {self._main_graph.get_instance: image_batch})
                 actions = []
                 for i in range(len(action_probs)):
                     actions.append(np.argmax(action_probs[i]))
@@ -229,17 +183,10 @@ class ActorCritic(BaseAgent):
                 prob = softmax(action_probs[:, 0:cf.num_class], axis=1)
                 label_prob.extend(list(compress(prob, dones)))
                 env.update_done(dones)
-
         return reward_all, label_predict, label_actual, label_prob
 
     def preprocess(self, sess, readers, locations):
-        """
-        Method to do preprocessing.
-        :param sess:
-        :param readers:
-        :param locations:
-        :return:
-        """
+        """Method to do preprocessing."""
         # Initialize variables
         env = BatchSimEnv()
         image_batch = []
@@ -250,10 +197,9 @@ class ActorCritic(BaseAgent):
             clear_model_dir(os.path.join(cf.prep_path, location))
             if cf.reader.split(".")[-1] == "TFReader":
                 fh = [tf.python_io.TFRecordWriter(os.path.join(cf.prep_path,
-                    location) + "/{}.tfr".format(i)) for i in range(5)]
+                                                               location) + "/{}.tfr".format(i)) for i in range(5)]
             else:
-                fh = bz2.BZ2File(os.path.join(cf.prep_path, location,
-                                              location + ".bz2"), "wb")
+                fh = bz2.BZ2File(os.path.join(cf.prep_path, location, location + ".bz2"), "wb")
 
             # Preprocess images and store them
             for (images, labels) in reader.get_batch(sess=sess):
@@ -264,7 +210,7 @@ class ActorCritic(BaseAgent):
                 while len(image_batch) > 0:
                     # Select actions using the policy network
                     action_probs = sess.run(self._main_graph.get_action_probs,
-                        feed_dict={self._main_graph.get_instance: image_batch})
+                                            {self._main_graph.get_instance: image_batch})
                     actions = []
                     for i in range(len(action_probs)):
                         actions.append(np.argmax(action_probs[i]))
@@ -276,93 +222,14 @@ class ActorCritic(BaseAgent):
                     _, dones, states, _, trues = self._compute_done(env)
 
                     # Store images
-                    self._store_prep_images(fh, list(compress(states, dones)),
-                                            list(compress(trues, dones)))
+                    self._store_prep_images(fh, list(compress(states, dones)), list(compress(trues, dones)))
 
                     image_batch = list(compress(states, np.logical_not(dones)))
                     env.update_done(dones)
 
             # Finish, close files
             if cf.reader.split(".")[-1] == "TFReader":
-                for i in range(5): fh[i].close()
+                for i in range(5):
+                    fh[i].close()
             else:
                 fh.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

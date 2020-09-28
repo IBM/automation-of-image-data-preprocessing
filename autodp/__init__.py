@@ -2,8 +2,6 @@
 The IBM License 2017.
 Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
-"""This project helps automate data preprocessing for machine learning."""
-
 from autodp import metadata
 from autodp.config.cf_container import Config
 
@@ -16,31 +14,3 @@ __copyright__ = metadata.copyright
 
 # Initialize default configuration
 cf = Config()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -6,64 +6,14 @@ import abc
 
 
 class BaseRunner(metaclass=abc.ABCMeta):
-    """
-    This abstract class defines basic functions of a model runner. It is
-    necessary to extend this class in order to build a complete runner.
-    """
+    """This abstract class defines basic functions of a model runner."""
     def __init__(self):
-        """
-        Temporarily do nothing for initialization.
-        """
         pass
 
     @abc.abstractmethod
     def train_model(self, cont):
-        """
-        Main method for training.
-        :param cont:
-        :return:
-        """
+        """Main method for training."""
 
     @abc.abstractmethod
     def test_model(self, path, fh):
-        """
-        Main method for testing.
-        :param path:
-        :param fh:
-        :return:
-        """
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        """Main method for testing."""

@@ -6,10 +6,7 @@ from autodp.runner.rl.rl_runner import RLRunner
 
 
 def letsgo():
-    """
-    Main method to start testing RL training.
-    :return:
-    """
+    """Main method to start testing RL training."""
     # Create the runner
     rl_runner = RLRunner()
 
@@ -23,24 +20,3 @@ def letsgo():
 
 if __name__ == "__main__":
     letsgo()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

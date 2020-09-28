@@ -12,21 +12,14 @@ import bz2
 
 from autodp.rl_core.agent.base_agent import BaseAgent
 from autodp import cf
-from autodp.utils.misc import get_class
+from autodp.utils.misc import get_class, clear_model_dir, softmax
 from autodp.rl_core.env.batch_env import BatchSimEnv
-from autodp.utils.misc import clear_model_dir
-from autodp.utils.misc import softmax
 from autodp.utils.feature_extractor import YouTube8MFeatureExtractor
 
 
 class DualQ(BaseAgent):
-    """
-    This class implements a RL algorithm using a dual-q network.
-    """
+    """This class implements a RL algorithm using a dual-q network."""
     def __init__(self):
-        """
-        Initialization.
-        """
         super().__init__()
 
         if cf.transfer:
@@ -35,39 +28,19 @@ class DualQ(BaseAgent):
             self._extractor = None
 
     def _setup_policy(self):
-        """
-        Build network to approximate an action-value function.
-        :return:
-        """
+        """Build network to approximate an action-value function."""
         # Construct a reinforcement learning graph
         rl_graph_class = get_class(cf.rl_graph)
-        self._main_graph = rl_graph_class(net_arch=cf.rl_arch,
-                                          loss_func=cf.rl_loss,
-                                          name="main_graph")
+        self._main_graph = rl_graph_class(net_arch=cf.rl_arch, loss_func=cf.rl_loss, name="main_graph")
 
     def load_specific_objects(self):
-        """
-        Do nothing.
-        :return:
-        """
         pass
 
     def save_specific_objects(self):
-        """
-        Do nothing.
-        :return:
-        """
         pass
 
     def train_policy(self, sess, train_reader, valid_reader, verbose):
-        """
-        Policy improvement and evaluation.
-        :param sess:
-        :param train_reader:
-        :param valid_reader:
-        :param verbose:
-        :return:
-        """
+        """Policy improvement and evaluation."""
         # Define the step drop for exploration
         step_drop = (cf.max_explore - cf.min_explore) / cf.anneal_step
 
@@ -92,11 +65,9 @@ class DualQ(BaseAgent):
                 if self._extractor is None:
                     feed_dict = {self._main_graph.get_instance: image_batch}
                 else:
-                    rep_batch = [self._extractor.extract_rgb_frame_features(i)
-                                 for i in image_batch]
+                    rep_batch = [self._extractor.extract_rgb_frame_features(i) for i in image_batch]
                     feed_dict = {self._main_graph.get_instance: rep_batch}
-                actions = sess.run(self._main_graph.get_next_action,
-                                   feed_dict=feed_dict)
+                actions = sess.run(self._main_graph.get_next_action, feed_dict=feed_dict)
 
                 # Do exploration
                 for i in range(len(actions)):
@@ -124,25 +95,21 @@ class DualQ(BaseAgent):
                     if self._extractor is None:
                         feed_dict = {self._main_graph.get_instance: o_states}
                     else:
-                        rep_batch = [self._extractor.extract_rgb_frame_features(
-                            i) for i in o_states]
+                        rep_batch = [self._extractor.extract_rgb_frame_features(i) for i in o_states]
                         feed_dict = {self._main_graph.get_instance: rep_batch}
-                    qmax = sess.run(self._main_graph.get_qmax,
-                                    feed_dict=feed_dict)
+                    qmax = sess.run(self._main_graph.get_qmax, feed_dict=feed_dict)
                     target = i_rewards + cf.gamma * qmax * end_mul
 
                     if self._extractor is None:
                         rep_batch = i_states
                     else:
-                        rep_batch = [self._extractor.extract_rgb_frame_features(
-                            i) for i in i_states]
-                    [_, err] = sess.run([self._main_graph.get_train_step,
-                        self._main_graph.get_error], feed_dict={
-                        self._main_graph.get_instance: rep_batch,
-                        self._main_graph.get_current_action: i_actions,
-                        self._main_graph.get_label: target,
-                        self._main_graph.get_phase_train: True,
-                        self._main_graph.get_keep_prob: cf.keep_prob})
+                        rep_batch = [self._extractor.extract_rgb_frame_features(i) for i in i_states]
+                    [_, err] = sess.run([self._main_graph.get_train_step, self._main_graph.get_error],
+                                        {self._main_graph.get_instance: rep_batch,
+                                         self._main_graph.get_current_action: i_actions,
+                                         self._main_graph.get_label: target,
+                                         self._main_graph.get_phase_train: True,
+                                         self._main_graph.get_keep_prob: cf.keep_prob})
                     err_list.append(err)
 
                 # Update input data after 1 step
@@ -168,32 +135,22 @@ class DualQ(BaseAgent):
 
                             # Save specific objects
                             self.save_specific_objects()
-
                     else:
                         early_stop += 1
 
                     if verbose:
-                        print("Step %d accumulated %g rewards, processed %d "
-                              "images, train error %g and valid rewards %g" % (
-                            num_step, reward_all, done_all,
-                            np.mean(err_list), best_valid))
+                        print("Step %d accumulated %g rewards, processed %d images, train err %g and val rewards %g."
+                              % (num_step, reward_all, done_all, np.mean(err_list), best_valid))
 
                     err_list = []
 
                     if early_stop >= 30:
-                        print("Exit due to early stopping")
+                        print("Exit due to early stopping.")
                         return -best_valid
-
         return -best_valid
 
     def predict(self, sess, reader, fh=None):
-        """
-        Apply the policy to predict image classification.
-        :param sess:
-        :param reader:
-        :param fh:
-        :return:
-        """
+        """Apply the policy to predict image classification."""
         # Initialize variables
         env = BatchSimEnv()
         image_batch = []
@@ -216,11 +173,9 @@ class DualQ(BaseAgent):
                 if self._extractor is None:
                     feed_dict = {self._main_graph.get_instance: image_batch}
                 else:
-                    rep_batch = [self._extractor.extract_rgb_frame_features(i)
-                                 for i in image_batch]
+                    rep_batch = [self._extractor.extract_rgb_frame_features(i) for i in image_batch]
                     feed_dict = {self._main_graph.get_instance: rep_batch}
-                [actions, qout] = sess.run([self._main_graph.get_next_action,
-                    self._main_graph.get_qout], feed_dict=feed_dict)
+                [actions, qout] = sess.run([self._main_graph.get_next_action, self._main_graph.get_qout], feed_dict)
 
                 # Do actions
                 env.step(actions, qout[:, 0:cf.num_class])
@@ -237,17 +192,10 @@ class DualQ(BaseAgent):
                 prob = softmax(qout[:, 0:cf.num_class], axis=1)
                 label_prob.extend(list(compress(prob, dones)))
                 env.update_done(dones)
-
         return reward_all, label_predict, label_actual, label_prob
 
     def preprocess(self, sess, readers, locations):
-        """
-        Method to do preprocessing.
-        :param sess:
-        :param readers:
-        :param locations:
-        :return:
-        """
+        """Method to do preprocessing."""
         # Initialize variables
         env = BatchSimEnv()
         image_batch = []
@@ -258,10 +206,9 @@ class DualQ(BaseAgent):
             clear_model_dir(os.path.join(cf.prep_path, location))
             if cf.reader.split(".")[-1] == "TFReader":
                 fh = [tf.python_io.TFRecordWriter(os.path.join(cf.prep_path,
-                    location) + "/{}.tfr".format(i)) for i in range(5)]
+                                                               location) + "/{}.tfr".format(i)) for i in range(5)]
             else:
-                fh = bz2.BZ2File(os.path.join(cf.prep_path, location,
-                                              location + ".bz2"), "wb")
+                fh = bz2.BZ2File(os.path.join(cf.prep_path, location, location + ".bz2"), "wb")
 
             # Preprocess images and store them
             for (images, labels) in reader.get_batch(sess=sess):
@@ -274,11 +221,9 @@ class DualQ(BaseAgent):
                     if self._extractor is None:
                         feed_dict = {self._main_graph.get_instance: image_batch}
                     else:
-                        rep_batch = [self._extractor.extract_rgb_frame_features(
-                            i) for i in image_batch]
+                        rep_batch = [self._extractor.extract_rgb_frame_features(i) for i in image_batch]
                         feed_dict = {self._main_graph.get_instance: rep_batch}
-                    [actions, qout] = sess.run([self._main_graph.get_next_action,
-                         self._main_graph.get_qout], feed_dict=feed_dict)
+                    [actions, qout] = sess.run([self._main_graph.get_next_action, self._main_graph.get_qout], feed_dict)
 
                     # Do actions
                     env.step(actions, qout[:, 0:cf.num_class])
@@ -287,80 +232,14 @@ class DualQ(BaseAgent):
                     _, dones, states, _, trues = self._compute_done(env)
 
                     # Store images
-                    self._store_prep_images(fh, list(compress(states, dones)),
-                                            list(compress(trues, dones)))
+                    self._store_prep_images(fh, list(compress(states, dones)), list(compress(trues, dones)))
 
                     image_batch = list(compress(states, np.logical_not(dones)))
                     env.update_done(dones)
 
             # Finish, close files
             if cf.reader.split(".")[-1] == "TFReader":
-                for i in range(5): fh[i].close()
+                for i in range(5):
+                    fh[i].close()
             else:
                 fh.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

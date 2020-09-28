@@ -14,20 +14,4 @@ setup(
     description="This project focuses on the automation of data preprocessing.",
     license="IBM Research Ireland",
     keywords="automation data preprocessing",
-    url="https://github.ibm.com/Dublin-Research-Lab/sentana",
 )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

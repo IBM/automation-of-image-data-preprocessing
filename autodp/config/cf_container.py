@@ -3,14 +3,12 @@ The IBM License 2017.
 Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
 """
 import ast
-from autodp.config.cf_parser import config_parser
-from autodp.config.cf_parser import PATH_TO_CONFIG_FILE
+
+from autodp.config.cf_parser import config_parser, PATH_TO_CONFIG_FILE
 
 
 class Config(object):
-    """
-    This is a container for configured parameters.
-    """
+    """This is a container for configured parameters."""
     def __init__(self):
         # Load general parameters
         self.train_path = config_parser.get("general_param", "train_path")
@@ -25,27 +23,20 @@ class Config(object):
         self.num_class = int(config_parser.get("general_param", "num_class"))
         self.num_epoch = int(config_parser.get("general_param", "num_epoch"))
         self.batch_size = int(config_parser.get("general_param", "batch_size"))
-        self.max_grad_norm = float(config_parser.get("general_param",
-                                                     "max_grad_norm"))
+        self.max_grad_norm = float(config_parser.get("general_param", "max_grad_norm"))
         self.valid_step = int(config_parser.get("general_param", "valid_step"))
         self.reader = config_parser.get("general_param", "reader")
         self.transfer = config_parser.getboolean("general_param", "transfer")
         self.keep_prob = float(config_parser.get("general_param", "keep_prob"))
 
         # Trainable via hypertuning
-        self.learning_rate = float(config_parser.get("general_param",
-                                                     "learning_rate"))
+        self.learning_rate = float(config_parser.get("general_param", "learning_rate"))
         self.reg_coef = float(config_parser.get("general_param", "reg_coef"))
-        self.kernel_size = ast.literal_eval(config_parser.get("general_param",
-                                                              "kernel_size"))
-        self.kernel_stride = ast.literal_eval(config_parser.get("general_param",
-                                                                "kernel_stride"))
-        self.pool_size = ast.literal_eval(config_parser.get("general_param",
-                                                            "pool_size"))
-        self.pool_stride = ast.literal_eval(config_parser.get("general_param",
-                                                              "pool_stride"))
-        self.fc_size = ast.literal_eval(config_parser.get("general_param",
-                                                          "fc_size"))
+        self.kernel_size = ast.literal_eval(config_parser.get("general_param", "kernel_size"))
+        self.kernel_stride = ast.literal_eval(config_parser.get("general_param", "kernel_stride"))
+        self.pool_size = ast.literal_eval(config_parser.get("general_param", "pool_size"))
+        self.pool_stride = ast.literal_eval(config_parser.get("general_param", "pool_stride"))
+        self.fc_size = ast.literal_eval(config_parser.get("general_param", "fc_size"))
 
         # Load neural network parameters
         self.nn_arch = config_parser.get("nn_param", "nn_arch")
@@ -69,41 +60,7 @@ class Config(object):
         self.dbl_coef = float(config_parser.get("rl_param", "dbl_coef"))
 
     def reset_config(self, path=PATH_TO_CONFIG_FILE):
-        """
-        Overwrite system config by application config.
-        :param path:
-        :return:
-        """
+        """Overwrite system config by application config."""
         config_parser.clear()
         config_parser.read(path)
         self.__init__()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -11,75 +11,42 @@ import tensorflow as tf
 import warnings
 import bz2
 
-from autodp.rl_core.agent.base_agent import BaseAgent
 from autodp import cf
-from autodp.utils.misc import get_class
 from autodp.rl_core.env.batch_env import BatchSimEnv
-from autodp.utils.misc import clear_model_dir
 from autodp.rl_core.sup.exp_buffer import ExpBuffer
-from autodp.utils.misc import from_pickle
-from autodp.utils.misc import to_pickle
+from autodp.rl_core.agent.base_agent import BaseAgent
+from autodp.utils.misc import get_class, from_pickle, to_pickle, clear_model_dir, softmax
 from autodp.utils.tf_utils import copy_network
 from autodp.utils.tf_utils import update_network
-from autodp.utils.misc import softmax
 
 
 class ExpDualDoubleQ(BaseAgent):
-    """
-    This class implements a RL algorithm using a dual-q network.
-    """
+    """This class implements a RL algorithm using a dual-q network."""
     def __init__(self):
-        """
-        Initialization.
-        """
         self._exp_buf = None
         super().__init__()
 
     def _setup_policy(self):
-        """
-        Build 2 networks: one to approximate an action-value function
-        and the other to select actions.
-        :return:
-        """
+        """Build 2 networks: one to approximate an action-value function and the other to select actions."""
         # Construct 2 reinforcement learning graphs
         rl_graph_class = get_class(cf.rl_graph)
-        self._main_graph = rl_graph_class(net_arch=cf.rl_arch,
-                                          loss_func=cf.rl_loss,
-                                          name="main_graph")
-        self._target_graph = rl_graph_class(net_arch=cf.rl_arch,
-                                            loss_func=cf.rl_loss,
-                                            name="target_graph")
+        self._main_graph = rl_graph_class(net_arch=cf.rl_arch, loss_func=cf.rl_loss, name="main_graph")
+        self._target_graph = rl_graph_class(net_arch=cf.rl_arch, loss_func=cf.rl_loss, name="target_graph")
 
     def load_specific_objects(self):
-        """
-        This overwritten method initializes an experimental buffer object
-        needed to continue learning.
-        :return:
-        """
+        """This overwritten method initializes an experimental buffer object needed to continue learning."""
         if os.path.isfile(cf.save_model + "/rl/exp_buf.pkl"):
             self._exp_buf = from_pickle(cf.save_model + "/rl/exp_buf.pkl")
         else:
-            warnings.warn("Experimental buffer not exist, "
-                          "continue learning with new buffer")
+            warnings.warn("Experimental buffer not exist, continue learning with new buffer")
             self._exp_buf = ExpBuffer(cf.buf_size)
 
     def save_specific_objects(self):
-        """
-        This overwritten method stores an experimental buffer object
-        needed to continue learning.
-        :return:
-        """
+        """This overwritten method stores an experimental buffer object needed to continue learning."""
         to_pickle(cf.save_model + "/rl/exp_buf.pkl", self._exp_buf)
 
     def train_policy(self, sess, train_reader, valid_reader, verbose):
-        """
-        Policy improvement and evaluation.
-        :param sess:
-        :param train_reader:
-        :param valid_reader:
-        :param verbose:
-        :return:
-        """
+        """Policy improvement and evaluation."""
         # Copy between the 2 graphs
         update_ops = copy_network(tf.trainable_variables(), cf.dbl_coef)
 
@@ -108,8 +75,7 @@ class ExpDualDoubleQ(BaseAgent):
 
             while len(image_batch) > 0.3*cf.batch_size:
                 # Select actions using the policy network
-                actions = sess.run(self._main_graph.get_next_action,
-                    feed_dict={self._main_graph.get_instance: image_batch})
+                actions = sess.run(self._main_graph.get_next_action, {self._main_graph.get_instance: image_batch})
 
                 # Do exploration
                 for i in range(len(actions)):
@@ -138,21 +104,18 @@ class ExpDualDoubleQ(BaseAgent):
                     end_mul = np.array([1 - e[4] for e in train_batch])
 
                     # Compute target q values
-                    target_action = sess.run(self._main_graph.get_next_action,
-                        feed_dict={self._main_graph.get_instance: o_states})
-                    target_qout = sess.run(self._target_graph.get_qout,
-                        feed_dict={self._target_graph.get_instance: o_states})
-                    qmax = target_qout[range(2*cf.batch_size), target_action]
+                    target_action = sess.run(self._main_graph.get_next_action, {self._main_graph.get_instance: o_states})
+                    target_qout = sess.run(self._target_graph.get_qout, {self._target_graph.get_instance: o_states})
+                    qmax = target_qout[range(2 * cf.batch_size), target_action]
                     target = i_rewards + cf.gamma * qmax * end_mul
 
                     # Train the 2 networks
-                    [_, err] = sess.run([self._main_graph.get_train_step,
-                        self._main_graph.get_error], feed_dict={
-                        self._main_graph.get_instance: i_states,
-                        self._main_graph.get_current_action: i_actions,
-                        self._main_graph.get_label: target,
-                        self._main_graph.get_phase_train: True,
-                        self._main_graph.get_keep_prob: cf.keep_prob})
+                    [_, err] = sess.run([self._main_graph.get_train_step, self._main_graph.get_error],
+                                        {self._main_graph.get_instance: i_states,
+                                         self._main_graph.get_current_action: i_actions,
+                                         self._main_graph.get_label: target,
+                                         self._main_graph.get_phase_train: True,
+                                         self._main_graph.get_keep_prob: cf.keep_prob})
                     update_network(sess, update_ops)
                     err_list.append(err)
 
@@ -184,27 +147,18 @@ class ExpDualDoubleQ(BaseAgent):
                         early_stop += 1
 
                     if verbose:
-                        print("Step %d accumulated %g rewards, processed %d "
-                              "images, train error %g and valid rewards %g" % (
-                            num_step, reward_all, done_all,
-                            np.mean(err_list), best_valid))
+                        print("Step %d accumulated %g rewards, processed %d images, train err %g and val rewards %g."
+                              % (num_step, reward_all, done_all, np.mean(err_list), best_valid))
 
                     err_list = []
 
                     if early_stop >= 30:
-                        print("Exit due to early stopping")
+                        print("Exit due to early stopping.")
                         return -best_valid
-
         return -best_valid
 
     def predict(self, sess, reader, fh=None):
-        """
-        Apply the policy to predict image classification.
-        :param sess:
-        :param reader:
-        :param fh:
-        :return:
-        """
+        """Apply the policy to predict image classification."""
         # Initialize variables
         env = BatchSimEnv()
         image_batch = []
@@ -224,9 +178,8 @@ class ExpDualDoubleQ(BaseAgent):
 
             while len(image_batch) > 0:
                 # Select actions using the policy network
-                [actions, qout] = sess.run(
-                    [self._main_graph.get_next_action, self._main_graph.get_qout],
-                    feed_dict={self._main_graph.get_instance: image_batch})
+                [actions, qout] = sess.run([self._main_graph.get_next_action, self._main_graph.get_qout],
+                                           {self._main_graph.get_instance: image_batch})
 
                 # Do actions
                 env.step(actions, qout[:, 0:cf.num_class])
@@ -243,17 +196,10 @@ class ExpDualDoubleQ(BaseAgent):
                 prob = softmax(qout[:, 0:cf.num_class], axis=1)
                 label_prob.extend(list(compress(prob, dones)))
                 env.update_done(dones)
-
         return reward_all, label_predict, label_actual, label_prob
 
     def preprocess(self, sess, readers, locations):
-        """
-        Method to do preprocessing.
-        :param sess:
-        :param readers:
-        :param locations:
-        :return:
-        """
+        """Method to do preprocessing."""
         # Initialize variables
         env = BatchSimEnv()
         image_batch = []
@@ -264,10 +210,9 @@ class ExpDualDoubleQ(BaseAgent):
             clear_model_dir(os.path.join(cf.prep_path, location))
             if cf.reader.split(".")[-1] == "TFReader":
                 fh = [tf.python_io.TFRecordWriter(os.path.join(cf.prep_path,
-                    location) + "/{}.tfr".format(i)) for i in range(5)]
+                                                               location) + "/{}.tfr".format(i)) for i in range(5)]
             else:
-                fh = bz2.BZ2File(os.path.join(cf.prep_path, location,
-                                              location + ".bz2"), "wb")
+                fh = bz2.BZ2File(os.path.join(cf.prep_path, location, location + ".bz2"), "wb")
 
             # Preprocess images and store them
             for (images, labels) in reader.get_batch(sess=sess):
@@ -277,10 +222,8 @@ class ExpDualDoubleQ(BaseAgent):
 
                 while len(image_batch) > 0:
                     # Select actions using the policy network
-                    [actions, qout] = sess.run(
-                        [self._main_graph.get_next_action,
-                        self._main_graph.get_qout],
-                        feed_dict={self._main_graph.get_instance: image_batch})
+                    [actions, qout] = sess.run([self._main_graph.get_next_action, self._main_graph.get_qout],
+                                               {self._main_graph.get_instance: image_batch})
 
                     # Do actions
                     env.step(actions, qout[:, 0:cf.num_class])
@@ -289,82 +232,14 @@ class ExpDualDoubleQ(BaseAgent):
                     _, dones, states, _, trues = self._compute_done(env)
 
                     # Store images
-                    self._store_prep_images(fh, list(compress(states, dones)),
-                                            list(compress(trues, dones)))
+                    self._store_prep_images(fh, list(compress(states, dones)), list(compress(trues, dones)))
 
                     image_batch = list(compress(states, np.logical_not(dones)))
                     env.update_done(dones)
 
             # Finish, close files
             if cf.reader.split(".")[-1] == "TFReader":
-                for i in range(5): fh[i].close()
+                for i in range(5):
+                    fh[i].close()
             else:
                 fh.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
