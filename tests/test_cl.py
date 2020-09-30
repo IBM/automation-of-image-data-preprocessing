@@ -1,7 +1,3 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 import os
 
 from autodp.runner.cl.cl_runner import CLRunner
@@ -14,7 +10,7 @@ def letsgo():
     cl_runner = CLRunner(preprocess=True)
 
     # Start training
-    cl_runner.train_model(cont=True)
+    cl_runner.train_model()
 
     # Start testing
     accuracy = cl_runner.test_model(path=os.path.join(cf.prep_path, "pp_test"))

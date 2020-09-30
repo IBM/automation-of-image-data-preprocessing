@@ -1,17 +1,8 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
-import os
 import abc
 
-import cv2 as cv
-from PIL import Image
-import numpy as np
 import pickle
 
 from autodp import cf
-from autodp.utils.tf_utils import wrap_image
 
 
 class BaseAgent(metaclass=abc.ABCMeta):
@@ -44,58 +35,11 @@ class BaseAgent(metaclass=abc.ABCMeta):
         return rewards, dones, states, actions, trues
 
     @staticmethod
-    def _done_analysis(env, fh, idx):
-        """This method is used to output images as well as their preprocessing paths."""
-        trues = env.get_labels()
-        paths = env.get_paths()
-        for (i, path) in enumerate(paths):
-            if path[-1][4]:
-                idx += 1
-
-                # Compute label strength
-                strength = "weak" if len(path) > cf.max_age else "strong"
-
-                # Store info
-                info = str(idx) + "\t\t" + str(trues[i]) + "\t\t" + str(path[-1][1]) + "\t\t" + strength + "\t\t"
-
-                # Traverse current path
-                list_im = []
-                for (p, ex) in enumerate(path):
-                    info += str(ex[1]) + " "
-                    name = str(idx) + "_" + str(p) + ".jpg"
-                    file = os.path.join(cf.result_path, name)
-                    img = ex[0] * 255
-                    cv.imwrite(file, img)
-                    list_im.append(file)
-
-                # Combine images
-                imgs = [Image.open(i) for i in list_im]
-                shape = sorted([(np.sum(i.size), i.size) for i in imgs])[0][1]
-                img_com = np.hstack((np.asarray(i.resize(shape)) for i in imgs))
-                img_com = Image.fromarray(img_com)
-                img_com.save(os.path.join(cf.result_path, str(idx) + ".jpg"))
-
-                # Delete tmp files
-                for i in list_im:
-                    os.remove(i)
-
-                # Store information to file
-                info += "\n"
-                fh.write(info)
-        return idx
-
-    @staticmethod
     def _store_prep_images(fh, images, labels):
         """Store preprocessed images."""
-        if cf.reader.split(".")[-1] == "TFReader":
-            for (image, label) in zip(images, labels):
-                tf_record = wrap_image(image, int(label))
-                tf_writer = fh[np.random.randint(0, 5)]
-                tf_writer.write(tf_record.SerializeToString())
-        else:
-            for (image, label) in zip(images, labels):
-                line = {"i": image, "l": label}
-                pickle.dump(line, fh, pickle.HIGHEST_PROTOCOL)
+        for (image, label) in zip(images, labels):
+            line = {"i": image, "l": label}
+            pickle.dump(line, fh, pickle.HIGHEST_PROTOCOL)
 
     @staticmethod
     def _get_current_step(env):
@@ -109,14 +53,6 @@ class BaseAgent(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def _setup_policy(self):
         """Build one or more networks to approximate value, action-value and policy functions."""
-
-    @abc.abstractmethod
-    def load_specific_objects(self):
-        """This method can be overwritten to initialize specific objects needed to continue learning."""
-
-    @abc.abstractmethod
-    def save_specific_objects(self):
-        """This method can be overwritten to store specific objects needed to continue learning."""
 
     @abc.abstractmethod
     def train_policy(self, sess, train_reader, valid_reader, verbose):

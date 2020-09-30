@@ -1,13 +1,7 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 import sys
 
 import tensorflow as tf
 import numpy as np
-import warnings
-import pandas as pd
 
 from autodp.runner.base_runner import BaseRunner
 from autodp.utils.misc import clear_model_dir, get_class
@@ -19,28 +13,21 @@ from autodp.utils.tf_utils import copy_network, update_network
 @BaseRunner.register
 class NNRunner(BaseRunner):
     """Main class to train/test a CNN model."""
-    def __init__(self):
-        pass
-
     @staticmethod
     def _run_train_step(sess, train_op, error_op, fd):
-        """Train a batch of data."""
         [_, err] = sess.run([train_op, error_op], feed_dict=fd)
         return err
 
     @staticmethod
     def _run_valid_step(sess, error_op, fd):
-        """Validate a batch of data."""
         return sess.run(error_op, feed_dict=fd)
 
     @staticmethod
     def _run_test_step(sess, pred, id, prob, fd):
-        """Test a batch of data."""
         return sess.run([pred, id, prob], feed_dict=fd)
 
     def _train(self, sess, train_reader, valid_reader, train_op, train_err_op, valid_err_op, train_image_op,
                train_label_op, valid_image_op, valid_label_op, phase_train, keep_prob, update_ops, verbose):
-        """Do training with a sqreader."""
         step, err_list = 0, []
         early_stop, best_valid = 0, sys.maxsize
         for (images, labels) in train_reader.get_batch(sess=sess):
@@ -57,37 +44,27 @@ class NNRunner(BaseRunner):
 
                 if valid_err < best_valid:
                     best_valid = valid_err
-                    early_stop = 0
+
                     if verbose:
                         print("Step %d has err %g and reduces val err %g" % (step, np.mean(err_list), best_valid))
 
-                        # Save model
-                        clear_model_dir(cf.save_model + "/nn")
-                        saver = tf.train.Saver(tf.global_variables())
-                        saver.save(sess, cf.save_model + "/nn/model")
-                else:
-                    if verbose:
-                        print("Step %d has err %g" % (step, np.mean(err_list)))
-                    early_stop += 1
+                    # Save model
+                    clear_model_dir(cf.save_model + "/nn")
+                    saver = tf.train.Saver(tf.global_variables())
+                    saver.save(sess, cf.save_model + "/nn/model")
 
                 err_list = []
-                if early_stop > 3:
-                    print("Exit due to early stopping.")
-                    break
         return best_valid
 
     def _valid(self, sess, reader, valid_err_op, image_op, label_op):
-        """Do validation with a sqreader."""
         err_list = []
         for (images, labels) in reader.get_batch(sess=sess):
             fd = {image_op: images, label_op: labels}
             err = self._run_valid_step(sess, valid_err_op, fd)
             err_list.append(err)
-
         return np.mean(err_list)
 
     def _test(self, sess, reader, pred, id, image_op, label_op, prob):
-        """Do testing with a sqreader."""
         p_list, i_list, pr_list = [], [], []
         for (images, labels) in reader.get_batch(sess=sess):
             fd = {image_op: images, label_op: labels}
@@ -96,16 +73,12 @@ class NNRunner(BaseRunner):
             i_list.extend(i)
             pr_list.extend(pr)
 
-        # Support kaggle output
-        df = pd.concat([pd.DataFrame({"id": i_list, "label": p_list}), pd.DataFrame(np.array(pr_list))], axis=1)
-        df.to_csv(cf.result_path + "/result.csv", header=True, sep=",", index=False)
-
         tmp = np.abs(np.array(i_list) - np.array(p_list))
         bool_tmp = [bool(t) for t in tmp]
         accuracy = 1 - sum(bool_tmp) / float(len(i_list))
         return accuracy
 
-    def train_model(self, cont=False, verbose=True):
+    def train_model(self, verbose=True):
         """Main method for training."""
         with tf.Graph().as_default(), tf.Session() as sess:
             # Initialize a data reader for train
@@ -123,16 +96,6 @@ class NNRunner(BaseRunner):
             update_ops = copy_network(tf.trainable_variables())
             sess.run(tf.group(tf.global_variables_initializer(), tf.local_variables_initializer()))
 
-            # Load existing model to continue training
-            if cont:
-                # Load the model
-                saver = tf.train.Saver(tf.global_variables())
-                ckpt = tf.train.get_checkpoint_state(cf.save_model + "/nn")
-                if ckpt and ckpt.model_checkpoint_path:
-                    saver.restore(sess, ckpt.model_checkpoint_path)
-                else:
-                    warnings.warn("Model not exist, train a new model now.")
-
             # Start to train
             best_valid = self._train(sess, train_reader, valid_reader, train_nng.get_train_step, train_nng.get_error,
                                      valid_nng.get_error, train_nng.get_instance, train_nng.get_label,
@@ -140,7 +103,7 @@ class NNRunner(BaseRunner):
                                      train_nng.get_keep_prob, update_ops, verbose)
         return best_valid
 
-    def test_model(self, path=cf.test_path, fh=None):
+    def test_model(self, path=cf.test_path):
         """Main method for testing."""
         with tf.Graph().as_default(), tf.Session() as sess:
             # Initialize a data reader

@@ -1,7 +1,3 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 from setuptools import setup, find_packages
 
 setup(
@@ -13,5 +9,5 @@ setup(
     author_email="M.N.Tran@ibm.com",
     description="This project focuses on the automation of data preprocessing.",
     license="IBM Research Ireland",
-    keywords="automation data preprocessing",
+    keywords="Automation Image Data Preprocessing",
 )

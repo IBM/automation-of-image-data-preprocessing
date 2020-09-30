@@ -1,7 +1,3 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 import ast
 
 from autodp.config.cf_parser import config_parser, PATH_TO_CONFIG_FILE
@@ -26,7 +22,6 @@ class Config(object):
         self.max_grad_norm = float(config_parser.get("general_param", "max_grad_norm"))
         self.valid_step = int(config_parser.get("general_param", "valid_step"))
         self.reader = config_parser.get("general_param", "reader")
-        self.transfer = config_parser.getboolean("general_param", "transfer")
         self.keep_prob = float(config_parser.get("general_param", "keep_prob"))
 
         # Trainable via hypertuning
@@ -50,14 +45,10 @@ class Config(object):
         self.rl_action = config_parser.get("rl_param", "rl_action")
         self.num_action = int(config_parser.get("rl_param", "num_action"))
         self.max_explore = float(config_parser.get("rl_param", "max_explore"))
-        self.buf_size = int(config_parser.get("rl_param", "buf_size"))
-
-        # Trainable via hypertuning
         self.min_explore = float(config_parser.get("rl_param", "min_explore"))
         self.anneal_step = float(config_parser.get("rl_param", "anneal_step"))
         self.gamma = float(config_parser.get("rl_param", "gamma"))
         self.max_age = int(config_parser.get("rl_param", "max_age"))
-        self.dbl_coef = float(config_parser.get("rl_param", "dbl_coef"))
 
     def reset_config(self, path=PATH_TO_CONFIG_FILE):
         """Overwrite system config by application config."""

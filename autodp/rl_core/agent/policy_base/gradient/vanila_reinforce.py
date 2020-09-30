@@ -1,7 +1,3 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 import os
 import sys
 
@@ -9,9 +5,10 @@ import tensorflow as tf
 import numpy as np
 from itertools import compress
 import bz2
+from scipy.special import softmax
 
 from autodp.rl_core.agent.base_agent import BaseAgent
-from autodp.utils.misc import get_class, clear_model_dir, softmax
+from autodp.utils.misc import get_class, clear_model_dir
 from autodp.rl_core.env.batch_env import BatchSimEnv
 from autodp import cf
 
@@ -19,11 +16,9 @@ from autodp import cf
 class VanilaReinforce(BaseAgent):
     """This class implements the vanila version of the REINFORCE policy."""
     def __init__(self):
-        """Initialization, call to father's init."""
         super().__init__()
 
     def _setup_policy(self):
-        """Build the policy network."""
         # Loss function must be the advantage log loss
         if cf.rl_loss != "autodp.network.loss.adv_log.AdvLog":
             raise ValueError("Policy gradient methods must be used with the advantage log loss.")
@@ -31,12 +26,6 @@ class VanilaReinforce(BaseAgent):
         # Construct a reinforcement learning graph
         rl_graph_class = get_class(cf.rl_graph)
         self._main_graph = rl_graph_class(net_arch=cf.rl_arch, loss_func=cf.rl_loss, name="main_graph")
-
-    def load_specific_objects(self):
-        pass
-
-    def save_specific_objects(self):
-        pass
 
     def train_policy(self, sess, train_reader, valid_reader, verbose):
         """Policy improvement and evaluation."""
@@ -46,7 +35,6 @@ class VanilaReinforce(BaseAgent):
         num_step = 0
         reward_all = 0
         done_all = 0
-        early_stop = 0
         err_list = []
         best_valid = -sys.maxsize
 
@@ -96,31 +84,20 @@ class VanilaReinforce(BaseAgent):
                     valid_reward, _, _, _ = self.predict(sess, valid_reader)
                     if valid_reward > best_valid:
                         best_valid = valid_reward
-                        early_stop = 0
 
-                        if verbose:
-                            # Save model
-                            clear_model_dir(cf.save_model + "/rl")
-                            saver = tf.train.Saver(tf.global_variables())
-                            saver.save(sess, cf.save_model + "/rl/model")
-
-                            # Save specific objects
-                            self.save_specific_objects()
-                    else:
-                        early_stop += 1
+                        # Save model
+                        clear_model_dir(cf.save_model + "/rl")
+                        saver = tf.train.Saver(tf.global_variables())
+                        saver.save(sess, cf.save_model + "/rl/model")
 
                     if verbose:
                         print("Step %d accumulated %g rewards, processed %d images, train err %g and val rewards %g."
                               % (num_step, reward_all, done_all, np.mean(err_list), best_valid))
 
                     err_list = []
-
-                    if early_stop >= 30:
-                        print("Exit due to early stopping.")
-                        return -best_valid
         return -best_valid
 
-    def predict(self, sess, reader, fh=None):
+    def predict(self, sess, reader):
         """Apply the policy to predict image classification."""
         # Initialize variables
         env = BatchSimEnv()
@@ -129,9 +106,6 @@ class VanilaReinforce(BaseAgent):
         label_predict = []
         label_prob = []
         reward_all = 0
-        if fh is not None:
-            idx = 0
-            clear_model_dir(cf.result_path)
 
         # Start to validate/test
         for (images, labels) in reader.get_batch(sess=sess):
@@ -148,9 +122,6 @@ class VanilaReinforce(BaseAgent):
 
                 # Do actions
                 env.step(actions, action_probs[:, 0:cf.num_class])
-
-                if fh is not None:
-                    idx = self._done_analysis(env, fh, idx)
 
                 # Collect predictions
                 rewards, dones, states, acts, trues = self._compute_done(env)
@@ -173,11 +144,7 @@ class VanilaReinforce(BaseAgent):
         for (reader, location) in zip(readers, locations):
             # Initialize file handles
             clear_model_dir(os.path.join(cf.prep_path, location))
-            if cf.reader.split(".")[-1] == "TFReader":
-                fh = [tf.python_io.TFRecordWriter(os.path.join(cf.prep_path,
-                                                               location) + "/{}.tfr".format(i)) for i in range(5)]
-            else:
-                fh = bz2.BZ2File(os.path.join(cf.prep_path, location, location + ".bz2"), "wb")
+            fh = bz2.BZ2File(os.path.join(cf.prep_path, location, location + ".bz2"), "wb")
 
             # Preprocess images and store them
             for (images, labels) in reader.get_batch(sess=sess):
@@ -206,8 +173,4 @@ class VanilaReinforce(BaseAgent):
                     env.update_done(dones)
 
             # Finish, close files
-            if cf.reader.split(".")[-1] == "TFReader":
-                for i in range(5):
-                    fh[i].close()
-            else:
-                fh.close()
+            fh.close()

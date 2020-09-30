@@ -1,7 +1,3 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 import numpy as np
 
 from autodp import cf
@@ -18,8 +14,6 @@ class SimEnv(object):
         self._age = 0
         self._path = []
         self._origin_state = state
-        self._tlcr_ratio = 0.95
-        self._brcr_ratio = 0.95
 
         # Get action class
         action_class = get_class(cf.rl_action)
@@ -42,8 +36,6 @@ class SimEnv(object):
         self._origin_state = state
         self._age = 0
         self._path = []
-        self._tlcr_ratio = 0.95
-        self._brcr_ratio = 0.95
 
     def restart(self):
         """Restart the environment with original state and label."""
@@ -51,7 +43,7 @@ class SimEnv(object):
         self._age = 0
         self._path = []
 
-    def step(self, action, qout=None, param_list=[]):
+    def step(self, action, qout=None):
         """Step one step in the environment."""
         # Recover image when it is overaged
         self._age += 1
@@ -61,13 +53,7 @@ class SimEnv(object):
             else:
                 action = np.argmax(qout)
 
-        param_list.extend([self._tlcr_ratio, self._brcr_ratio])
-        state, reward, done, tlcr, brcr = self._actor.apply_action(action, self._state, self._label, param_list)
-
-        if tlcr:
-            self._tlcr_ratio *= 0.95
-        if brcr:
-            self._brcr_ratio *= 0.95
+        state, reward, done = self._actor.apply_action(action, self._state, self._label)
 
         # Store example
         ex = [self._state, action, state, reward, done]

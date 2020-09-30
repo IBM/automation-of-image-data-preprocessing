@@ -1,7 +1,3 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 import os
 
 import bz2
@@ -16,7 +12,6 @@ from autodp import cf
 class SQReader(BaseReader):
     """This class implements a data reader that will read a file of data sequentially without shuffling."""
     def __init__(self, path, num_epoch=1):
-        """Initialization."""
         super().__init__(path, num_epoch)
 
         # Get full file name of input file

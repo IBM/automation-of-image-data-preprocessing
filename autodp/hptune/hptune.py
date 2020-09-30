@@ -1,7 +1,3 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 import os
 
 import configparser
@@ -17,7 +13,6 @@ cfg_file = "/Users/minhtn/ibm/projects/autodp/configs/hptune.cfg"
 class HPTune(object):
     """This class implements an hyper-optimizer for hyper-parameter tuning."""
     def __init__(self):
-        """Initialization by creating a search space."""
         self._space = self._create_space()
         self._count = 0
 

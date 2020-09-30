@@ -1,7 +1,3 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 import tensorflow as tf
 
 from autodp.network.arch.base_arch import BaseArch
@@ -13,7 +9,6 @@ from autodp import cf
 class DualQArch(BaseArch):
     """This class implements the dual Q network."""
     def __init__(self, instance, phase_train, keep_prob, name):
-        """Initialize by storing the input instance."""
         super().__init__(instance, phase_train, keep_prob, name)
 
     def build_arch(self):

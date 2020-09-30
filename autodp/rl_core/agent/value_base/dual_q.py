@@ -1,7 +1,3 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 import sys
 import os
 
@@ -9,12 +5,12 @@ import numpy as np
 from itertools import compress
 import tensorflow as tf
 import bz2
+from scipy.special import softmax
 
 from autodp.rl_core.agent.base_agent import BaseAgent
 from autodp import cf
-from autodp.utils.misc import get_class, clear_model_dir, softmax
+from autodp.utils.misc import get_class, clear_model_dir
 from autodp.rl_core.env.batch_env import BatchSimEnv
-from autodp.utils.feature_extractor import YouTube8MFeatureExtractor
 
 
 class DualQ(BaseAgent):
@@ -22,22 +18,11 @@ class DualQ(BaseAgent):
     def __init__(self):
         super().__init__()
 
-        if cf.transfer:
-            self._extractor = YouTube8MFeatureExtractor()
-        else:
-            self._extractor = None
-
     def _setup_policy(self):
         """Build network to approximate an action-value function."""
         # Construct a reinforcement learning graph
         rl_graph_class = get_class(cf.rl_graph)
         self._main_graph = rl_graph_class(net_arch=cf.rl_arch, loss_func=cf.rl_loss, name="main_graph")
-
-    def load_specific_objects(self):
-        pass
-
-    def save_specific_objects(self):
-        pass
 
     def train_policy(self, sess, train_reader, valid_reader, verbose):
         """Policy improvement and evaluation."""
@@ -50,7 +35,6 @@ class DualQ(BaseAgent):
         num_step = 0
         reward_all = 0
         done_all = 0
-        early_stop = 0
         err_list = []
         best_valid = -sys.maxsize
 
@@ -62,11 +46,7 @@ class DualQ(BaseAgent):
 
             while len(image_batch) > 0.3*cf.batch_size:
                 # Select actions using the policy network
-                if self._extractor is None:
-                    feed_dict = {self._main_graph.get_instance: image_batch}
-                else:
-                    rep_batch = [self._extractor.extract_rgb_frame_features(i) for i in image_batch]
-                    feed_dict = {self._main_graph.get_instance: rep_batch}
+                feed_dict = {self._main_graph.get_instance: image_batch}
                 actions = sess.run(self._main_graph.get_next_action, feed_dict=feed_dict)
 
                 # Do exploration
@@ -91,19 +71,10 @@ class DualQ(BaseAgent):
                     o_states = np.array([e[2] for e in train_batch])
                     i_rewards = np.array([e[3] for e in train_batch])
                     end_mul = np.array([1 - e[4] for e in train_batch])
-
-                    if self._extractor is None:
-                        feed_dict = {self._main_graph.get_instance: o_states}
-                    else:
-                        rep_batch = [self._extractor.extract_rgb_frame_features(i) for i in o_states]
-                        feed_dict = {self._main_graph.get_instance: rep_batch}
+                    feed_dict = {self._main_graph.get_instance: o_states}
                     qmax = sess.run(self._main_graph.get_qmax, feed_dict=feed_dict)
                     target = i_rewards + cf.gamma * qmax * end_mul
-
-                    if self._extractor is None:
-                        rep_batch = i_states
-                    else:
-                        rep_batch = [self._extractor.extract_rgb_frame_features(i) for i in i_states]
+                    rep_batch = i_states
                     [_, err] = sess.run([self._main_graph.get_train_step, self._main_graph.get_error],
                                         {self._main_graph.get_instance: rep_batch,
                                          self._main_graph.get_current_action: i_actions,
@@ -125,31 +96,20 @@ class DualQ(BaseAgent):
                     valid_reward, _, _, _ = self.predict(sess, valid_reader)
                     if valid_reward > best_valid:
                         best_valid = valid_reward
-                        early_stop = 0
 
-                        if verbose:
-                            # Save model
-                            clear_model_dir(cf.save_model + "/rl")
-                            saver = tf.train.Saver(tf.global_variables())
-                            saver.save(sess, cf.save_model + "/rl/model")
-
-                            # Save specific objects
-                            self.save_specific_objects()
-                    else:
-                        early_stop += 1
+                        # Save model
+                        clear_model_dir(cf.save_model + "/rl")
+                        saver = tf.train.Saver(tf.global_variables())
+                        saver.save(sess, cf.save_model + "/rl/model")
 
                     if verbose:
                         print("Step %d accumulated %g rewards, processed %d images, train err %g and val rewards %g."
                               % (num_step, reward_all, done_all, np.mean(err_list), best_valid))
 
                     err_list = []
-
-                    if early_stop >= 30:
-                        print("Exit due to early stopping.")
-                        return -best_valid
         return -best_valid
 
-    def predict(self, sess, reader, fh=None):
+    def predict(self, sess, reader):
         """Apply the policy to predict image classification."""
         # Initialize variables
         env = BatchSimEnv()
@@ -158,9 +118,6 @@ class DualQ(BaseAgent):
         label_predict = []
         label_prob = []
         reward_all = 0
-        if fh is not None:
-            idx = 0
-            clear_model_dir(cf.result_path)
 
         # Start to validate/test
         for (images, labels) in reader.get_batch(sess=sess):
@@ -170,18 +127,11 @@ class DualQ(BaseAgent):
 
             while len(image_batch) > 0:
                 # Select actions using the policy network
-                if self._extractor is None:
-                    feed_dict = {self._main_graph.get_instance: image_batch}
-                else:
-                    rep_batch = [self._extractor.extract_rgb_frame_features(i) for i in image_batch]
-                    feed_dict = {self._main_graph.get_instance: rep_batch}
+                feed_dict = {self._main_graph.get_instance: image_batch}
                 [actions, qout] = sess.run([self._main_graph.get_next_action, self._main_graph.get_qout], feed_dict)
 
                 # Do actions
                 env.step(actions, qout[:, 0:cf.num_class])
-
-                if fh is not None:
-                    idx = self._done_analysis(env, fh, idx)
 
                 # Collect predictions
                 rewards, dones, states, acts, trues = self._compute_done(env)
@@ -204,11 +154,7 @@ class DualQ(BaseAgent):
         for (reader, location) in zip(readers, locations):
             # Initialize file handles
             clear_model_dir(os.path.join(cf.prep_path, location))
-            if cf.reader.split(".")[-1] == "TFReader":
-                fh = [tf.python_io.TFRecordWriter(os.path.join(cf.prep_path,
-                                                               location) + "/{}.tfr".format(i)) for i in range(5)]
-            else:
-                fh = bz2.BZ2File(os.path.join(cf.prep_path, location, location + ".bz2"), "wb")
+            fh = bz2.BZ2File(os.path.join(cf.prep_path, location, location + ".bz2"), "wb")
 
             # Preprocess images and store them
             for (images, labels) in reader.get_batch(sess=sess):
@@ -218,11 +164,7 @@ class DualQ(BaseAgent):
 
                 while len(image_batch) > 0:
                     # Select actions using the policy network
-                    if self._extractor is None:
-                        feed_dict = {self._main_graph.get_instance: image_batch}
-                    else:
-                        rep_batch = [self._extractor.extract_rgb_frame_features(i) for i in image_batch]
-                        feed_dict = {self._main_graph.get_instance: rep_batch}
+                    feed_dict = {self._main_graph.get_instance: image_batch}
                     [actions, qout] = sess.run([self._main_graph.get_next_action, self._main_graph.get_qout], feed_dict)
 
                     # Do actions
@@ -238,8 +180,4 @@ class DualQ(BaseAgent):
                     env.update_done(dones)
 
             # Finish, close files
-            if cf.reader.split(".")[-1] == "TFReader":
-                for i in range(5):
-                    fh[i].close()
-            else:
-                fh.close()
+            fh.close()

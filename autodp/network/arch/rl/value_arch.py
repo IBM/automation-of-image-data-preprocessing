@@ -1,11 +1,7 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 import tensorflow as tf
 
 from autodp.network.arch.base_arch import BaseArch
-from autodp.utils.tf_utils import declare_variable, declare_variable_weight_decay, relu
+from autodp.utils.tf_utils import declare_variable, declare_variable_weight_decay
 from autodp import cf
 
 
@@ -13,13 +9,12 @@ from autodp import cf
 class ValueArch(BaseArch):
     """A class inherited from BaseArch to implement a complete architecture for the value network in policy gradient."""
     def __init__(self, instance, phase_train, keep_prob, name):
-        """Initialize by storing the input instance."""
         super().__init__(instance, phase_train, keep_prob, name)
 
     def build_arch(self):
         """Build the concrete neural network architecture."""
         # Build the common part
-        common_layer = relu(self._build_common_part())
+        common_layer = tf.nn.relu(self._build_common_part())
         dim = common_layer.get_shape().as_list()[1]
 
         # Add the specific part

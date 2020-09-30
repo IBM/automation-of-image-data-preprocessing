@@ -1,7 +1,3 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 from autodp.runner.nn.nn_runner import NNRunner
 
 
@@ -11,7 +7,7 @@ def letsgo():
     nn_runner = NNRunner()
 
     # Start training
-    nn_runner.train_model(cont=False)
+    nn_runner.train_model()
 
     # Start testing
     accuracy = nn_runner.test_model()

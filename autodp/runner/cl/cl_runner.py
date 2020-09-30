@@ -1,7 +1,3 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 import os
 
 import tensorflow as tf
@@ -49,7 +45,7 @@ class CLRunner(NNRunner):
             # Do preprocessing
             rl_agent.preprocess(sess, readers, locations)
 
-    def train_model(self, cont=False, verbose=True):
+    def train_model(self, verbose=True):
         """Main method for training."""
         with tf.Graph().as_default(), tf.Session() as sess:
             # Initialize a data reader for train
@@ -66,16 +62,8 @@ class CLRunner(NNRunner):
             # Copy network between train and validation
             update_ops = copy_network(tf.trainable_variables())
 
-            # Config trainable variables for transferring learning
-            if cf.rl_graph.split(".")[3] == "tl":
-                common_vars = tf.global_variables()[: 2 * len(cf.fc_size)]
-            else:
-                common_vars = tf.global_variables()[: 2 * (len(cf.kernel_size) + len(cf.fc_size))]
-
-            if cont is False:
-                train_vars = tf.trainable_variables()[: int(len(tf.trainable_variables()) / 2)]
-                var_list = [x for x in train_vars if x not in common_vars]
-                train_nng.reset_train_step(var_list)
+            # Config trainable variables
+            common_vars = tf.global_variables()[: 2 * (len(cf.kernel_size) + len(cf.fc_size))]
 
             # Do initialization
             sess.run(tf.group(tf.global_variables_initializer(), tf.local_variables_initializer()))

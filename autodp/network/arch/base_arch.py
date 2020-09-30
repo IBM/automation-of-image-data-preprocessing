@@ -1,7 +1,3 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 import abc
 import tensorflow as tf
 
@@ -12,7 +8,6 @@ from autodp import cf
 class BaseArch(metaclass=abc.ABCMeta):
     """A base class to build a concrete architecture."""
     def __init__(self, instance, phase_train, keep_prob, name):
-        """Initialize by storing the input instance."""
         self._instance = instance
         self._name = name
         self._phase_train = phase_train
@@ -21,7 +16,6 @@ class BaseArch(metaclass=abc.ABCMeta):
         self._xavi_init = tf.contrib.layers.xavier_initializer()
 
     def _build_conv_layer(self, layer_input, kernel_size, kernel_stride, pool_size, pool_stride, layer_name):
-        """Build a convolutional layer."""
         with tf.variable_scope("/".join([self._name, layer_name])) as scope:
             kernel = declare_variable_weight_decay("kernel", self._conv_init, cf.reg_coef, kernel_size)
             conv = tf.nn.conv2d(layer_input, kernel, kernel_stride, "SAME")
@@ -31,7 +25,6 @@ class BaseArch(metaclass=abc.ABCMeta):
         return layer_output
 
     def _build_fully_connected_layer(self, layer_input, fc_size, layer_name):
-        """Build a fully connected layer."""
         with tf.variable_scope("/".join([self._name, layer_name])) as scope:
             dim = layer_input.get_shape().as_list()[1]
             weight = declare_variable_weight_decay("weight", self._xavi_init, cf.reg_coef, [dim, fc_size])

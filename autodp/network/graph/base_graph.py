@@ -1,7 +1,3 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 import abc
 
 import tensorflow as tf
@@ -13,7 +9,6 @@ from autodp.utils.misc import get_class
 class BaseGraph(metaclass=abc.ABCMeta):
     """This is a base class that helps build the tensorflow graph."""
     def __init__(self, net_arch, loss_func, name):
-        """Initialization of building a graph."""
         self._net_arch = net_arch
         self._loss_func = loss_func
         self._name = name

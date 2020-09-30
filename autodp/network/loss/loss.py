@@ -1,14 +1,9 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 import abc
 
 
 class Loss(metaclass=abc.ABCMeta):
     """An abstract class to compute the loss function."""
     def __init__(self, preds, trues):
-        """Initialize by storing predicted and true values."""
         self._preds = preds
         self._trues = trues
 

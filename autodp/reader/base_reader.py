@@ -1,7 +1,3 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 import os
 import abc
 
@@ -9,7 +5,6 @@ import abc
 class BaseReader(metaclass=abc.ABCMeta):
     """This abstract class defines basic functions of a data reader."""
     def __init__(self, path, num_epoch):
-        """Initialization."""
         # Check if input files are available
         if not os.listdir(path):
             raise FileNotFoundError("Input files not found in %s" % path)

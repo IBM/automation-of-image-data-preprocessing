@@ -1,7 +1,3 @@
-"""
-The IBM License 2017.
-Contact: Tran Ngoc Minh (M.N.Tran@ibm.com).
-"""
 import tensorflow as tf
 
 from autodp.network.graph.base_graph import BaseGraph
@@ -12,16 +8,11 @@ from autodp import cf
 class NNGraph(BaseGraph):
     """This class implements a vanila tensorflow graph for a plain neural network."""
     def __init__(self, net_arch, loss_func, name):
-        """Initialization of building a graph."""
         super().__init__(net_arch, loss_func, name)
 
     def _build_model(self):
-        """Build the total graph."""
         # The tensor inputs are defined
-        if cf.transfer:
-            self._instance = tf.placeholder(dtype=tf.float32, shape=[None, 1024])
-        else:
-            self._instance = tf.placeholder(dtype=tf.float32, shape=[None, cf.ima_height, cf.ima_width, cf.ima_depth])
+        self._instance = tf.placeholder(dtype=tf.float32, shape=[None, cf.ima_height, cf.ima_width, cf.ima_depth])
         self._target = tf.placeholder(tf.int32, shape=[None])
         self._phase_train = tf.placeholder_with_default(False, shape=())
         self._keep_prob = tf.placeholder_with_default(1.0, shape=())
