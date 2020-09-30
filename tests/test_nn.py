@@ -1,8 +1,7 @@
 from autodp.runner.nn.nn_runner import NNRunner
 
 
-def letsgo():
-    """Main method to start testing CNN network."""
+if __name__ == "__main__":
     # Create the runner
     nn_runner = NNRunner()
 
@@ -12,7 +11,3 @@ def letsgo():
     # Start testing
     accuracy = nn_runner.test_model()
     print("Final test accuracy is %g" % accuracy)
-
-
-if __name__ == "__main__":
-    letsgo()

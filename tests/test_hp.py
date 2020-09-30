@@ -2,8 +2,7 @@ from autodp.hptune.hptune import HPTune
 from autodp.runner.rl.rl_runner import RLRunner
 
 
-def letsgo():
-    """Main method to start testing RL training."""
+if __name__ == "__main__":
     # Create the hyper-tuner
     hptune = HPTune()
 
@@ -21,7 +20,3 @@ def letsgo():
     # Start testing
     accuracy, reward, predict, actual = rl_runner.test_model()
     print("Final test accuracy is %g" % accuracy)
-
-
-if __name__ == "__main__":
-    letsgo()
