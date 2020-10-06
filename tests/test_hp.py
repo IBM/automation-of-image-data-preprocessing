@@ -7,7 +7,7 @@ if __name__ == "__main__":
     hptune = HPTune()
 
     # Start tuning
-    res = hptune.run_tuning(n_call=50)
+    res = hptune.run_tuning(n_call=10)
     print("Best config: ", res.x)
     print("Start to train for the best configuration.........................")
 

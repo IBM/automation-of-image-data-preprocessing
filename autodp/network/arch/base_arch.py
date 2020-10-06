@@ -1,7 +1,7 @@
 import abc
 import tensorflow as tf
 
-from autodp.utils.tf_utils import declare_variable, declare_variable_weight_decay, relu
+from autodp.utils.tf_utils import declare_variable, declare_variable_weight_decay
 from autodp import cf
 
 
@@ -17,19 +17,19 @@ class BaseArch(metaclass=abc.ABCMeta):
 
     def _build_conv_layer(self, layer_input, kernel_size, kernel_stride, pool_size, pool_stride, layer_name):
         with tf.variable_scope("/".join([self._name, layer_name])) as scope:
-            kernel = declare_variable_weight_decay("kernel", self._conv_init, cf.reg_coef, kernel_size)
+            kernel = declare_variable_weight_decay("kernel", kernel_size, self._conv_init, cf.reg_coef)
             conv = tf.nn.conv2d(layer_input, kernel, kernel_stride, "SAME")
             bias = declare_variable(name="bias", shape=[kernel_size[-1]], initializer=self._conv_init)
-            norm = tf.nn.lrn(input=relu(tf.nn.bias_add(conv, bias)))
+            norm = tf.nn.lrn(input=tf.nn.relu(tf.nn.bias_add(conv, bias)))
             layer_output = tf.nn.max_pool(norm, pool_size, pool_stride, "VALID")
         return layer_output
 
     def _build_fully_connected_layer(self, layer_input, fc_size, layer_name):
         with tf.variable_scope("/".join([self._name, layer_name])) as scope:
             dim = layer_input.get_shape().as_list()[1]
-            weight = declare_variable_weight_decay("weight", self._xavi_init, cf.reg_coef, [dim, fc_size])
+            weight = declare_variable_weight_decay("weight", [dim, fc_size], self._xavi_init, cf.reg_coef)
             bias = declare_variable(name="bias", shape=[fc_size], initializer=self._conv_init)
-            layer_output = tf.nn.bias_add(tf.matmul(relu(layer_input), weight), bias)
+            layer_output = tf.nn.bias_add(tf.matmul(tf.nn.relu(layer_input), weight), bias)
         return layer_output
 
     def _build_common_part(self):

@@ -20,7 +20,7 @@ class NNArch(BaseArch):
 
         # Add the specific part
         with tf.variable_scope("/".join([self._name, "final_layer"])) as scope:
-            weight = declare_variable_weight_decay("weight", self._xavi_init, cf.reg_coef, [dim, cf.num_class])
+            weight = declare_variable_weight_decay("weight", [dim, cf.num_class], self._xavi_init, cf.reg_coef)
             bias = declare_variable(name="bias", shape=[cf.num_class], initializer=self._conv_init)
             final_output = tf.nn.bias_add(tf.matmul(common_layer, weight), bias)
         return final_output

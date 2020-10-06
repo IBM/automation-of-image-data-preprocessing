@@ -21,12 +21,12 @@ class DualQArch(BaseArch):
         with tf.variable_scope("/".join([self._name, "final_layer"])) as scope:
             # Implement the dual Q network
             # Split into separate advantage and value
-            pre_adv, pre_val = tf.split(value=common_layer, num_split=2, split_dim=1)
-            w_adv = declare_variable_weight_decay("w_adv", self._xavi_init, cf.reg_coef, [dim/2, cf.num_action])
-            w_val = declare_variable_weight_decay("w_val", self._xavi_init, cf.reg_coef, [dim/2, 1])
+            pre_adv, pre_val = tf.split(value=common_layer, num_or_size_splits=2, axis=1)
+            w_adv = declare_variable_weight_decay("w_adv", [dim/2, cf.num_action], self._xavi_init, cf.reg_coef)
+            w_val = declare_variable_weight_decay("w_val", [dim/2, 1], self._xavi_init, cf.reg_coef)
             advantage = tf.matmul(pre_adv, w_adv)
             value = tf.matmul(pre_val, w_val)
 
             # Combine them together to get final Q value
-            q_out = value + tf.sub(advantage, tf.reduce_mean(advantage, axis=1, keep_dims=True))
+            q_out = value + tf.subtract(advantage, tf.reduce_mean(advantage, axis=1, keep_dims=True))
         return q_out, tf.arg_max(q_out, 1), tf.reduce_max(q_out, 1)

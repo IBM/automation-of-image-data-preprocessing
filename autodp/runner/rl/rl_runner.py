@@ -31,7 +31,7 @@ class RLRunner(BaseRunner):
             best_valid = rl_agent.train_policy(sess, train_reader, valid_reader, verbose)
         return best_valid
 
-    def test_model(self, path=cf.test_path, fh=None):
+    def test_model(self, path=cf.test_path):
         """Main method for testing."""
         with tf.Graph().as_default(), tf.Session() as sess:
             # Initialize rl agent
@@ -54,7 +54,7 @@ class RLRunner(BaseRunner):
                 warnings.warn("Model not exist, train a new model now.")
 
             # Actual test
-            reward, predict, actual, prob = rl_agent.predict(sess, reader, fh)
+            reward, predict, actual, prob = rl_agent.predict(sess, reader)
 
             # Accuracy
             tmp = np.abs(np.array(actual)-np.array(predict))

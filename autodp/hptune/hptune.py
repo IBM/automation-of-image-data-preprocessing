@@ -119,6 +119,7 @@ class HPTune(object):
         tf.reset_default_graph()
 
         # Run the runner to get objective value
-        m = __import__(self._config_input.get("objective", "module"), self._config_input.get("objective", "function"))
+        m = __import__(self._config_input.get("objective", "module"),
+                       fromlist=self._config_input.get("objective", "function"))
         objective = getattr(m, self._config_input.get("objective", "function"))
         return objective().train_model(verbose=False)
