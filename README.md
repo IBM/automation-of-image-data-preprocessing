@@ -24,7 +24,7 @@ This project focuses on the automation of image data preprocessing. It contains 
     author = {Tran Ngoc Minh, Mathieu Sinn, Hoang Thanh Lam, Martin Wistuba},
     journal = {CoRR},
     volume = {1806.05886},
-    year = {2018},
-    url = {https://arxiv.org/abs/1806.05886}
+    year = {2021},
+    url = {https://arxiv.org/abs/1806.05886v2}
 }
 ```
